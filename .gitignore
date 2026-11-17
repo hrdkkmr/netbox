@@ -1,0 +1,29 @@
+# Compiled C binaries, shared libraries, and object files
+examples/tcp/server
+examples/tcp/client
+*.o
+*.out
+*.so
+
+# Node.js and VS Code extension build artifacts
+node_modules/
+extension/dist/
+*.vsix
+
+# Python virtual environments and cache
+.venv/
+__pycache__/
+*.py[cod]
+
+# Packet captures and temporary logs
+*.pcap
+*.pcapng
+*.log
+*.jsonl
+
+# IDE and OS metadata
+.vscode/
+.vscode-server/
+.DS_Store
+Thumbs.db
+*:Zone.Identifier

@@ -1,0 +1,79 @@
+{
+  "name": "netbox-vscode",
+  "displayName": "NetBox — Computer Networks Assistant",
+  "description": "Visual networking development and debugging environment for Computer Networks.",
+  "version": "0.1.0",
+  "publisher": "netbox",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Programming Languages"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "netbox.openDashboard",
+        "title": "NetBox: Open Dashboard",
+        "category": "NetBox"
+      },
+      {
+        "command": "netbox.openVisualizer",
+        "title": "NetBox: Open Visualizer",
+        "category": "NetBox"
+      },
+      {
+        "command": "netbox.checkBackend",
+        "title": "NetBox: Check Backend Connection",
+        "category": "NetBox"
+      },
+      {
+        "command": "netbox.showProjectInfo",
+        "title": "NetBox: Show Project Information",
+        "category": "NetBox"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "netbox-sidebar",
+          "title": "NetBox",
+          "icon": "media/netbox-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "netbox-sidebar": [
+        {
+          "id": "netbox.quickActions",
+          "name": "NetBox Actions"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "NetBox",
+      "properties": {
+        "netbox.backendUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8000",
+          "description": "Base URL of the local NetBox backend service."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.3"
+  }
+}
