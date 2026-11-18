@@ -1,6 +1,7 @@
 # Compiled C binaries, shared libraries, and object files
 examples/tcp/server
 examples/tcp/client
+packet_capture/netbox_pcap
 *.o
 *.out
 *.so
@@ -27,3 +28,11 @@ __pycache__/
 .DS_Store
 Thumbs.db
 *:Zone.Identifier
+
+# Runtime student progress & compiled UDP binaries
+backend/data/curriculum_progress.json
+examples/udp/udp_server
+examples/udp/udp_client
+
+# Packaged VS Code extension bundles (distribute via Marketplace / GitHub Release)
+*.vsix

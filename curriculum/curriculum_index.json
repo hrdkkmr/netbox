@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "title": "NetBox Interactive Computer Networks Curriculum",
+  "description": "Nine hands-on Computer Networks modules connecting protocol theory, real LD_PRELOAD + libpcap observations, deterministic analysis, and grounded local AI tutoring.",
+  "lab_files": [
+    "labs/mod1_networking_foundations.json",
+    "labs/mod2_ethernet_mac_arp.json",
+    "labs/mod3_ip_subnetting.json",
+    "labs/mod4_tcp_deep_dive.json",
+    "labs/mod5_udp_datagrams.json",
+    "labs/mod6_dns_resolution.json",
+    "labs/mod7_http_web.json",
+    "labs/mod8_routing_troubleshooting.json",
+    "labs/mod9_network_monitoring.json"
+  ]
+}

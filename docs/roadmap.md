@@ -9,13 +9,13 @@ This document is the central development plan for **NetBox**.
 | Phase | Title | Status |
 | :--- | :--- | :--- |
 | **Phase 0** | Foundation | **Completed** (Repository setup, docs, verified TCP example, WSL 2 migration verified) |
-| **Phase 1** | VS Code Extension Foundation | **Completed / Foundation Scaffolded** (Extension scaffolded, Dashboard & Visualizer Webviews implemented, FastAPI backend running; pending Node.js/nvm build verification) |
-| **Phase 2** | C Program Execution and Event Collection | **Completed** (`libnetbox_trace.so` LD_PRELOAD library, run manager, process runner, REST API, visualizer integration, test suite A–G verified) |
-| **Phase 3** | Networking Visualizer | **Not Started** (Next Phase) |
-| **Phase 4** | Packet Capture | **Not Started** |
-| **Phase 5** | Local AI Assistant | **Not Started** |
-| **Phase 6** | NetBox Core and LAN Integration | **Not Started** |
-| **Phase 7** | Testing and Finalization | **Not Started** |
+| **Phase 1** | VS Code Extension Foundation | **Built & Compiled** (`nvm` + Node.js v26.13.1 installed in WSL 2; `tsc --noEmit` & `esbuild` build `dist/extension.js` cleanly; FastAPI backend verified; manual VS Code GUI `F5` launch pending) |
+| **Phase 2** | C Program Execution and Event Collection | **Completed & Regression-Verified** (`libnetbox_trace.so`, run manager, process runner, REST API, test suite A–G passing) |
+| **Phase 3** | Networking Visualizer | **Completed & Verified** (Modular visualizer engines, dynamic topology, separate listener/accepted/client socket states, API-level sequence diagram, monotonic timing, non-destructive filters, timestamp playback, deterministic inspector; 17/17 automated tests + live browser preview verified) |
+| **Phase 4** | Packet Capture | **Completed & Live-Verified** (Native C `libpcap` helper `packet_capture/netbox_pcap` with `cap_net_raw,cap_net_admin=eip`, IPv4/TCP decoder, handshake/termination/flow/retransmission analyzer, conservative 4-tuple monotonic correlator, header-only privacy default, visualizer Packets/Flows/Correlations/Dual-Layer Replay tabs; 19/19 backend tests including live `lo` capture + 19/19 JS tests + live UI verified) |
+| **Phase 5** | Local AI Assistant | **Completed & Live-Verified** (Three-layer grounded local AI architecture in `backend/app/ai/`, local-only Ollama provider tested live with `qwen2.5-coder:1.5b`, deterministic retrieval & flow isolation, compact `<OBSERVED_EVIDENCE_DATA_ONLY>` framing, citation & confidence validator, Learning Mode, visualizer AI Assistant tab with verified clickable evidence links; 11/11 Phase 5 backend tests + 21/21 JS tests + live Ollama UI verified) |
+| **Phase 6** | NetBox Core and LAN Integration | **Completed & Software-Verified** (Configurable localhost/LAN modes, Windows+WSL2 NAT discovery & opt-in forwarding helper, lightweight pairing token access control, independent component health APIs, offline SVG QR code, FastAPI-served Browser Web UI, service startup/stop/check scripts, System & LAN dashboard tab; 7/7 backend tests + 3/3 JS tests + empirical Windows↔WSL2 reachability verified; physical 2nd-device test documented as pending physical device) |
+| **Phase 7** | Curriculum Labs & Final Hardening | **Completed & Live-Verified** (9 structured JSON CN curriculum modules, compiled C POSIX UDP server/client, allowlisted TCP/UDP/DNS/HTTP/L2/L3/Monitoring lab runner, deterministic bitwise IPv4 Subnet Calculator, 5-mode grounded Curriculum AI Tutor, deterministic assessment grader & persistent local JSON progress, polished 7-tab unified UI, full docs & demo guide; 77/77 automated tests + live browser end-to-end verified) |
 
 ---
 
@@ -95,6 +95,7 @@ This document is the central development plan for **NetBox**.
 - **Known Risks:**
   - UI clutter on high-frequency `send`/`recv` loops (e.g., streaming chunks); timestamp vs. `sequence` ordering across two processes (`server` + `client`).
 - **Gate Before Next Phase:** Visualizer renders multi-process client-server runs cleanly and accurately from real Phase 2 event logs.
+- **Phase 3 Status:** **Completed & Verified**. Documented in [`docs/phase_3.md`](./phase_3.md). Delivered modular frontend engines (`extension/media/visualizer/*.js`), dynamic topology with separate listening/accepted/client sockets, API-level sequence diagram, monotonic timing & A↔B interval analysis, non-destructive filters, timestamp-aware playback, and deterministic event inspector. Passed 16/16 unit tests + 1/1 real Phase 2 integration test + live browser verification against FastAPI. Extension compiles cleanly (`dist/extension.js`); ready for Phase 4 upon user approval.
 
 ---
 
@@ -113,6 +114,7 @@ This document is the central development plan for **NetBox**.
 - **Known Risks:**
   - Capturing requires elevated privileges (`CAP_NET_RAW`); TCP segmentation/coalescing means 1 `send()` may not equal 1 TCP segment.
 - **Gate Before Next Phase:** Dual-layer (`socket_api` + `packet_capture`) capture and visualization verified end-to-end on loopback TCP runs.
+- **Phase 4 Status:** **Completed & Live-Verified**. Documented in [`docs/phase_4.md`](./phase_4.md) and [`docs/packet_schema.md`](./packet_schema.md). Built native `libpcap` helper `packet_capture/netbox_pcap` (least-privilege `cap_net_raw,cap_net_admin=eip`), backend parser/analyzer/correlator/REST endpoints (`/packets`, `/flows`, `/correlations`), and visualizer packet/handshake/flow/correlation/dual-layer replay tabs. Live loopback runs captured real 10-packet TCP sessions (complete SYN/SYN+ACK/ACK handshake, 29 B echo payloads header-only, bidirectional FIN termination) with 10/10 high-confidence correlations. Ready for Phase 5 upon user approval.
 
 ---
 

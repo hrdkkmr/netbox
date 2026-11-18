@@ -1,0 +1,121 @@
+{
+  "lab_id": "mod7-http",
+  "module_number": 7,
+  "module_title": "Module 7 — HTTP and Web Communication",
+  "title": "HTTP Methods, Headers, Status Codes, TCP Framing & HTTP vs. HTTPS/TLS",
+  "topic": "HTTP Requests/Responses, Methods, Headers, Status Codes, HTTP vs. HTTPS, TLS Basics",
+  "difficulty": "intermediate",
+  "estimated_minutes": 20,
+  "learning_objectives": [
+    "Observe an actual HTTP/1.1 request/response exchange running atop a real TCP three-way handshake.",
+    "Inspect HTTP methods (GET, POST), request/response headers, and status codes (200 OK vs. 404 Not Found).",
+    "Explain why ordinary packet capture shows plaintext HTTP headers but CANNOT read encrypted HTTPS (TLS) application payloads."
+  ],
+  "prerequisites": ["mod4-tcp", "mod6-dns"],
+  "concept_explanation": [
+    {
+      "title": "HTTP/1.1 Layered Over TCP",
+      "summary": "HTTP is an application-layer request-response protocol built on top of TCP. Before a single HTTP byte is sent, TCP completes its 3-way handshake.",
+      "key_points": [
+        "Requests carry a request line (METHOD path HTTP/1.1), headers (Host, User-Agent, Content-Length), and optional body.",
+        "Responses return a status line (e.g., 200 OK, 404 Not Found, 500 Internal Server Error), headers, and body."
+      ],
+      "protocol_layers": ["Application (HTTP / L7)", "Transport (TCP / L4)"]
+    },
+    {
+      "title": "HTTP vs. HTTPS & TLS Encryption Boundary",
+      "summary": "HTTPS inserts TLS between TCP and HTTP. After the TCP handshake, client and server complete a TLS handshake to verify server identity (certificates) and negotiate symmetric session keys.",
+      "key_points": [
+        "Under HTTPS, packet capture still sees IP addresses, TCP ports (443), TCP flags, and TLS handshake metadata (e.g., SNI), NOT decrypted HTTP URLs, headers, or bodies.",
+        "Never pretend an ordinary packet capture can inspect encrypted HTTPS application payloads without session keys."
+      ],
+      "protocol_layers": ["Application (HTTP)", "Security (TLS)", "Transport (TCP)"]
+    }
+  ],
+  "experiment": {
+    "experiment_id": "http-local",
+    "title": "Start an Ephemeral Local HTTP Server & Capture Real GET/POST/404 Exchanges",
+    "instructions": "Launches a safe ephemeral Python HTTP/1.1 server bound strictly to 127.0.0.1, executes real HTTP requests, captures the underlying TCP packets with libpcap, and records exact HTTP status codes and headers.",
+    "required_setup": [
+      "Python stdlib http.server (localhost 127.0.0.1 only)",
+      "Phase 4 libpcap capture helper for real TCP packet capture"
+    ],
+    "execution_steps": [
+      "Run 'HTTP GET 200 OK & POST Echo' and inspect the captured TCP 3-way handshake, data transfer, and real HTTP headers.",
+      "Run 'HTTP 404 Not Found' to compare transport success (TCP completed cleanly!) with application-layer 404 status.",
+      "Switch to the Packets tab and verify how HTTP rides inside TCP PSH+ACK segments."
+    ],
+    "supported_scenarios": [
+      {
+        "scenario_id": "http-local",
+        "label": "1. Local HTTP GET (200 OK) & POST Echo",
+        "description": "Starts ephemeral localhost HTTP server, performs GET / and POST /echo, captures real TCP packets and headers.",
+        "protocol": "HTTP/TCP",
+        "default_params": {}
+      },
+      {
+        "scenario_id": "http-404",
+        "label": "2. Failed HTTP Resource Request (404 Not Found)",
+        "description": "Requests a missing route (/does-not-exist) to distinguish TCP connection success from HTTP 404 error.",
+        "protocol": "HTTP/TCP",
+        "default_params": {}
+      }
+    ],
+    "expected_observations": [
+      "TCP handshake (SYN -> SYN+ACK -> ACK) completes BEFORE the HTTP GET request is transmitted.",
+      "HTTP 404 still has a successful TCP 3-way handshake and graceful FIN teardown — 404 is an Application Layer status.",
+      "Real HTTP status codes and headers (Content-Type, Content-Length, Server) are captured from the live exchange."
+    ],
+    "observation_caveats": [
+      "Packet capture remains header-only by default for privacy; observed HTTP status/headers come from the controlled lab client.",
+      "With HTTPS/TLS, wire packet capture sees encrypted ciphertext records, never plaintext HTTP headers or bodies."
+    ]
+  },
+  "questions": [
+    {
+      "question_id": "m7-q1",
+      "type": "scenario",
+      "prompt": "A client requests GET /missing from a running HTTP server and receives '404 Not Found'. What does the TCP layer show?",
+      "options": [
+        "TCP connect() fails with ECONNREFUSED and sends RST.",
+        "TCP completes a normal 3-way handshake, delivers the HTTP request and 404 response reliably, and closes normally.",
+        "TCP retransmits the GET request 404 times.",
+        "No TCP packets are generated for 404 errors."
+      ],
+      "correct_option_index": 1,
+      "expected_keywords": [],
+      "rubric_summary": "404 is an HTTP (L7) status delivered over a completely healthy TCP (L4) connection.",
+      "explanation": "TCP only guarantees reliable delivery between sockets. Because the server accepted the connection and sent an HTTP 404 payload, the TCP handshake and delivery both succeeded."
+    },
+    {
+      "question_id": "m7-q2",
+      "type": "multiple_choice",
+      "prompt": "When capturing packets of an HTTPS (TLS) connection with ordinary libpcap (without TLS session keys), which of the following can you legitimately observe?",
+      "options": [
+        "The plaintext HTTP Authorization header and cookies.",
+        "The JSON body returned by the API.",
+        "IP addresses, TCP ports/flags/sequence numbers, packet sizes, and timing — but NOT the decrypted HTTP payload.",
+        "The server's private RSA/ECDSA key."
+      ],
+      "correct_option_index": 2,
+      "expected_keywords": [],
+      "rubric_summary": "IP/TCP headers and sizes remain visible; HTTP headers and body are encrypted by TLS.",
+      "explanation": "TLS encrypts Layer 7 HTTP content, leaving Layer 3/4 headers (IP, TCP ports, flags, packet lengths, timing) observable on the wire."
+    },
+    {
+      "question_id": "m7-q3",
+      "type": "short_answer",
+      "prompt": "Explain the difference between an idempotent HTTP GET request and a POST request, and name one header commonly included in a POST.",
+      "options": [],
+      "correct_option_index": null,
+      "expected_keywords": ["get", "post", "body", "content-length", "content-type"],
+      "rubric_summary": "GET retrieves a resource without side effects; POST submits data in the body with Content-Length / Content-Type.",
+      "explanation": "GET retrieves representations safely/idempotently without a request body, whereas POST submits payload data (described by Content-Type and Content-Length headers) to create or process state."
+    }
+  ],
+  "completion_criteria": {
+    "require_experiment_run": true,
+    "min_assessment_score_pct": 67,
+    "description": "Execute a local HTTP experiment and score at least 67% on the assessment."
+  }
+}

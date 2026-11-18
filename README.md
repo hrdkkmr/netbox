@@ -2,8 +2,8 @@
 
 **NetBox** is a Computer Networks learning and debugging project designed to pair a local/offline classroom networking environment with a VS Code extension that runs student networking programs, captures real execution events, visualizes what actually happens, and uses a local LLM to explain observed behavior using course context.
 
-> **Current Phase:** **Phase 2 — C Program Execution and Real Socket Event Collection** (Completed / In Review).  
-> The repository foundation, architecture, C TCP example, event schema, VS Code extension, Webview dashboard, visualizer foundation, FastAPI local backend, and `LD_PRELOAD` socket instrumentation engine (`libnetbox_trace.so`) are implemented and verified. Ready for Phase 3 visualizer enhancements.
+> **Current Status:** **Phases 0–8 Packaged & Verified (`v0.8.0`)**  
+> NetBox is a complete, offline-capable Computer Networks laboratory, real network-observation platform (`LD_PRELOAD` + `libpcap`), host–client LAN learning server (Browser + packaged VS Code Extension `.vsix`), 9-module interactive curriculum with deterministic assessments & subnet calculator, 10-step Interactive Guided Tour & Presentation Mode, and evidence-grounded local AI tutor powered by host-local Ollama (`qwen2.5-coder:1.5b`). See [`docs/FINAL_ARCHITECTURE.md`](docs/FINAL_ARCHITECTURE.md), [`docs/PHASE8.md`](docs/PHASE8.md), [`docs/TEST_REPORT.md`](docs/TEST_REPORT.md), [`CHANGELOG.md`](CHANGELOG.md), and [`docs/DEMO_GUIDE.md`](docs/DEMO_GUIDE.md).
 
 ---
 
@@ -18,12 +18,27 @@ NetBox addresses this by grounding all visualizations and AI explanations strict
 ## Features by Phase
 
 - **Phase 0 (Foundation - Done):** Complete CN lab PDF index, environment audit, reference POSIX C TCP echo implementation (`examples/tcp/`), and foundational documentation.
-- **Phase 1 (Extension & Backend - Done):** VS Code Extension scaffolding, Webview Dashboard and Visualizer panels, lightweight FastAPI backend (`127.0.0.1:8000`), and simulated demo trace.
-- **Phase 2 (C Socket Interception - Done):** Dynamic user-space socket interception library (`instrumentation/libnetbox_trace.so`) capturing 12 POSIX socket APIs, backend run manager and process runner, JSONL event merger, and live visualizer integration (`ACTUAL SOCKET API EVENTS`).
-- **Phase 3 (Networking Visualizer - Next):** Advanced visualizer enhancements: state machine tracking (`LISTEN`, `ESTABLISHED`, `CLOSED`), interactive sequence diagrams, payload inspection, and timing analysis.
-- **Phase 4 (Packet Capture - Planned):** Wire-level packet capture (`libpcap`/`tcpdump`) correlated with socket API events.
-- **Phase 5 (Local AI Assistant - Planned):** Lightweight local LLM explaining real recorded telemetry grounded in course context.
-- **Phase 6 (Classroom Core - Planned):** Offline LAN/hotspot sharing of LLM API and mock lab targets.
+- **Phase 1 (Extension & Backend - Built):** VS Code Extension built (`dist/extension.js` via Linux `nvm` + `esbuild`), Webview Dashboard & Visualizer panels, lightweight FastAPI backend (`127.0.0.1:8000`), and simulated demo trace.
+- **Phase 2 (C Socket Interception - Done):** Dynamic user-space socket interception library (`instrumentation/libnetbox_trace.so`) capturing 12 POSIX socket APIs, backend run manager and process runner, JSONL event merger, and REST execution endpoints.
+- **Phase 3 (Interactive Networking Visualizer - Done):** Modular frontend visualizer engines (`extension/media/visualizer/*.js`) with dynamic topology, separate server listening/accepted/client socket states, API-level sequence diagram, monotonic timing & A↔B interval analysis, non-destructive filtering, timestamp-aware playback (`0.5x`–`4x`), and deterministic event inspector.
+- **Phase 4 (Real Network Packet Capture - Done):** Native C `libpcap` capture helper (`packet_capture/netbox_pcap` with least-privilege `cap_net_raw,cap_net_admin=eip`), IPv4/TCP header decoder, handshake/termination/flow/retransmission analyzer, conservative 4-tuple monotonic correlator, header-only privacy default, and visualizer Packets/Flows/Correlations/Dual-Layer Replay tabs.
+- **Phase 5 (Grounded Local AI Assistant - Done):** Three-layer grounded local AI architecture (`backend/app/ai/`) running locally via Ollama (`qwen2.5-coder:1.5b`, zero cloud fallback), deterministic evidence retrieval & flow isolation, citation verification & confidence guardrails, Learning Mode, and integrated visualizer AI Assistant tab with verified clickable `[PACKET: ...]` / `[SOCKET: ...]` navigation.
+- **Phase 6 (NetBox Core & LAN Integration - Done):** Host–client LAN/hotspot mode (`./scripts/start_netbox.sh --lan`), FastAPI-served Browser Web UI (`GET /`), Windows + WSL 2 NAT discovery & opt-in forwarding helper, pairing token access control, independent component health endpoints (`/api/system/*`), offline SVG QR code, client heartbeats, and System & LAN Dashboard tab.
+- **Phase 7 (Curriculum Labs & Final Hardening - Done):** 9 structured Computer Networks curriculum modules (`curriculum/labs/`), C POSIX UDP binaries (`examples/udp/`), safe allowlisted lab runner (TCP/UDP/DNS/HTTP/L2/L3/Monitoring), deterministic IPv4 Subnet Calculator, 5-mode grounded Curriculum AI Tutor, deterministic assessments with persisted local progress, and complete documentation + demo guide.
+
+### Quick Start (Host Local or LAN Mode)
+
+```bash
+# Localhost-only mode (opens at http://127.0.0.1:8000/)
+./scripts/start_netbox.sh
+
+# LAN / Hotspot sharing mode (prints LAN Client URL, WSL 2 forwarding hint & pairing token)
+./scripts/start_netbox.sh --lan
+
+# Health diagnostics & graceful shutdown
+./scripts/check_netbox.sh
+./scripts/stop_netbox.sh
+```
 
 ---
 
@@ -60,12 +75,13 @@ netbox/
 ├── docs/
 │   ├── architecture.md         # System architecture, data flow & security
 │   ├── cn_lab_index.md         # Index of all 9 CN lab PDFs and NetBox mappings
-│   ├── decisions.md            # Technical and provisional decision log (DEC-001 - DEC-015)
+│   ├── decisions.md            # Technical and provisional decision log (DEC-001 - DEC-019)
 │   ├── environment_audit.md    # WSL, toolchain, apt, and VS Code audit
 │   ├── event_schema.md         # Schema specification (socket_api vs packet_capture v1.0)
 │   ├── phase_0.md              # Phase 0 checklist, verification, and exit criteria
 │   ├── phase_1.md              # Phase 1 documentation, setup, and checklist
 │   ├── phase_2.md              # Phase 2 C socket interception & run engine guide
+│   ├── phase_3.md              # Phase 3 Interactive Networking Visualizer guide
 │   └── roadmap.md              # Phase 0–7 development plan and current status
 ├── examples/
 │   └── tcp/
@@ -74,6 +90,7 @@ netbox/
 │       └── README.md           # Build, usage, and error behavior notes
 ├── extension/                  # NetBox VS Code Extension
 │   ├── media/
+│   │   ├── visualizer/         # Phase 3 modular visualizer engines (state, timing, filter, sequence, playback, inspector, renderers)
 │   │   ├── dashboard.css / dashboard.js
 │   │   ├── visualizer.css / visualizer.js
 │   │   └── netbox-icon.svg
@@ -82,6 +99,7 @@ netbox/
 │   │   ├── providers/          # DashboardPanel, VisualizerPanel, SidebarProvider
 │   │   ├── services/           # BackendService, types
 │   │   └── extension.ts        # Main activation entry point
+│   ├── tests/                  # Phase 3 unit & live Phase 2 integration tests (node --test)
 │   ├── esbuild.js
 │   ├── package.json
 │   └── tsconfig.json
@@ -189,13 +207,22 @@ Retrieve real recorded events:
 curl http://127.0.0.1:8000/api/runs/RUN_ID/events
 ```
 
-### 4. Running the Phase 2 Test Suite
+### 4. Running Automated Test Suites
 
+Phase 2 socket instrumentation suite (Tests A–G):
 ```bash
 python3 instrumentation/tests/test_suite.py
 ```
 
-All 7 test suites (Tests A through G) will execute against the compiled binaries and verify event capture, sequencing, schema conformance, error states (`ECONNREFUSED`), and clean termination.
+Phase 3–5 visualizer unit & live integration suite (21 tests):
+```bash
+cd extension && npm test
+```
+
+Phase 4 + Phase 5 backend packet capture & grounded AI suites (30 test methods):
+```bash
+backend/.venv/bin/python3 -m unittest backend/tests/test_phase4_packets.py backend/tests/test_phase5_ai.py -v
+```
 
 ---
 
@@ -206,6 +233,11 @@ All 7 test suites (Tests A through G) will execute against the compiled binaries
 - **Phase 0 Checklist:** [`docs/phase_0.md`](docs/phase_0.md)
 - **Phase 1 Guide:** [`docs/phase_1.md`](docs/phase_1.md)
 - **Phase 2 Report:** [`docs/phase_2.md`](docs/phase_2.md)
+- **Phase 3 Report:** [`docs/phase_3.md`](docs/phase_3.md)
+- **Phase 4 Report:** [`docs/phase_4.md`](docs/phase_4.md)
+- **Packet Schema (v1.0):** [`docs/packet_schema.md`](docs/packet_schema.md)
+- **Phase 5 Architecture:** [`docs/PHASE5_ARCHITECTURE.md`](docs/PHASE5_ARCHITECTURE.md)
+- **Phase 5 Guide & Setup:** [`docs/PHASE5.md`](docs/PHASE5.md)
 - **Architecture:** [`docs/architecture.md`](docs/architecture.md)
 - **Event Schema (v1.0):** [`docs/event_schema.md`](docs/event_schema.md)
 - **CN Lab Index:** [`docs/cn_lab_index.md`](docs/cn_lab_index.md)

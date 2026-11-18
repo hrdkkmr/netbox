@@ -1,0 +1,114 @@
+{
+  "lab_id": "mod6-dns",
+  "module_number": 6,
+  "module_title": "Module 6 — DNS",
+  "title": "Domain Name Resolution, RFC 1035 Wire Queries, Record Types & Caching",
+  "topic": "Domain Names, DNS Records (A/AAAA/CNAME/NS), Recursive vs. Iterative Resolution, Caching",
+  "difficulty": "intermediate",
+  "estimated_minutes": 20,
+  "learning_objectives": [
+    "Observe real RFC 1035 DNS queries and responses transmitted over UDP.",
+    "Distinguish A, AAAA, CNAME, MX, and NS records and recursive vs. iterative resolution.",
+    "Measure and explain the latency difference between uncached lookups and cached DNS responses."
+  ],
+  "prerequisites": ["mod5-udp"],
+  "concept_explanation": [
+    {
+      "title": "Hierarchical Namespace & DNS Records",
+      "summary": "DNS maps human-readable domain names to IP addresses and service metadata using a distributed hierarchy (Root -> TLD -> Authoritative nameservers).",
+      "key_points": [
+        "Common record types: A (IPv4), AAAA (IPv6), CNAME (alias), NS (nameserver), MX (mail exchanger).",
+        "Standard DNS queries use UDP (typically port 53) for single-packet speed, falling back to TCP for large or truncated responses."
+      ],
+      "protocol_layers": ["Application (DNS / L7)", "Transport (UDP / TCP)"]
+    },
+    {
+      "title": "Recursive vs. Iterative Resolution & TTL Caching",
+      "summary": "Stub resolvers send recursive queries to a local recursive resolver, which iteratively queries Root, TLD, and Authoritative servers and caches the answer for TTL seconds.",
+      "key_points": [
+        "TTL (Time To Live) controls how long resolvers cache a DNS record before re-querying.",
+        "Cached lookups avoid upstream round trips and dramatically reduce resolution latency."
+      ],
+      "protocol_layers": ["Application (DNS / L7)"]
+    }
+  ],
+  "experiment": {
+    "experiment_id": "dns-local",
+    "title": "Run Offline-Safe RFC 1035 DNS Query/Response & Cache Latency Experiment",
+    "instructions": "Executes a controlled localhost RFC 1035 UDP DNS responder and client. Sends a real DNS A-record query twice — first uncached (simulating recursive resolution latency) and second cached — while capturing real UDP wire packets on loopback.",
+    "required_setup": [
+      "Localhost UDP loopback (100% offline — requires zero Internet connectivity)",
+      "Phase 4 libpcap capture helper for real UDP DNS packet capture"
+    ],
+    "execution_steps": [
+      "Run 'Local RFC 1035 DNS Query + Cache Comparison' to capture actual binary DNS query/response packets over UDP.",
+      "Inspect the measured uncached vs. cached response times, transaction IDs, record type (A), TTL, and returned IPv4 answer.",
+      "Optionally run 'System Resolver Lookup (localhost)' to inspect OS resolver behavior."
+    ],
+    "supported_scenarios": [
+      {
+        "scenario_id": "dns-local",
+        "label": "1. Local RFC 1035 DNS Query & Cache Comparison (Offline-Safe)",
+        "description": "Sends real RFC 1035 binary DNS A-record queries over UDP loopback (uncached vs. cached) with packet capture.",
+        "protocol": "DNS/UDP",
+        "default_params": { "domain": "lab.netbox.local" }
+      }
+    ],
+    "expected_observations": [
+      "Real UDP DNS query and response packets are captured on loopback with matching DNS Transaction IDs.",
+      "The DNS response includes an A record answer and TTL value.",
+      "The cached lookup completes measurably faster than the initial uncached lookup."
+    ],
+    "observation_caveats": [
+      "The offline-safe DNS lab runs an authoritative local responder on an ephemeral localhost UDP port (not public port 53) so it works reliably without Internet access.",
+      "NetBox never claims external Internet DNS packets were captured unless they actually appear in the capture."
+    ]
+  },
+  "questions": [
+    {
+      "question_id": "m6-q1",
+      "type": "multiple_choice",
+      "prompt": "Why does standard DNS primarily use UDP rather than TCP for routine A/AAAA queries?",
+      "options": [
+        "UDP automatically encrypts DNS queries.",
+        "Most DNS queries and responses fit in a single datagram, avoiding TCP's 3-way handshake latency overhead.",
+        "TCP cannot carry port 53 traffic.",
+        "UDP guarantees delivery without retries."
+      ],
+      "correct_option_index": 1,
+      "expected_keywords": [],
+      "rubric_summary": "UDP avoids 3-way handshake overhead for small single-packet request/response exchanges.",
+      "explanation": "A typical DNS query/response fits cleanly in one UDP datagram, completing in 1 RTT instead of TCP's handshake + request + teardown overhead."
+    },
+    {
+      "question_id": "m6-q2",
+      "type": "multiple_choice",
+      "prompt": "What is the role of the TTL (Time To Live) field inside a DNS resource record?",
+      "options": [
+        "Maximum number of router hops the packet can traverse.",
+        "Number of seconds a resolver may cache the DNS record before re-querying upstream.",
+        "Maximum length of a domain name in bytes.",
+        "The port number of the recursive resolver."
+      ],
+      "correct_option_index": 1,
+      "expected_keywords": [],
+      "rubric_summary": "DNS record TTL specifies cache lifetime in seconds (distinct from IP header hop TTL).",
+      "explanation": "DNS TTL (in seconds) tells caching resolvers how long to reuse an answer before expiring it. Do not confuse DNS record TTL with IPv4 header hop-limit TTL."
+    },
+    {
+      "question_id": "m6-q3",
+      "type": "short_answer",
+      "prompt": "Distinguish a recursive DNS query from an iterative DNS query.",
+      "options": [],
+      "correct_option_index": null,
+      "expected_keywords": ["recursive", "iterative", "resolver", "referral", "final"],
+      "rubric_summary": "Recursive asks resolver to return the final answer; iterative returns best-known answer or referral to next nameserver.",
+      "explanation": "In a recursive query, the client asks the resolver to chase down and return the final IP answer. In an iterative query, a nameserver replies with either the answer or a referral to the next authoritative server."
+    }
+  ],
+  "completion_criteria": {
+    "require_experiment_run": true,
+    "min_assessment_score_pct": 67,
+    "description": "Execute the DNS experiment and score at least 67% on the assessment."
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "lab_id": "mod9-monitoring",
+  "module_number": 9,
+  "module_title": "Module 9 — Network Monitoring",
+  "title": "Measured Throughput, Inter-Packet Latency, Flow Direction & Traffic Patterns",
+  "topic": "Throughput, Latency, Packet Loss, Active Connections, Traffic Direction, Utilization",
+  "difficulty": "advanced",
+  "estimated_minutes": 25,
+  "learning_objectives": [
+    "Measure real application goodput/throughput (KB/s, Mbps), packet counts, and duration from live captured executions.",
+    "Analyze directional byte totals (client->server vs. server->client) and multi-flow traffic patterns.",
+    "Distinguish header overhead vs. application payload (goodput vs. wire throughput) and identify anomalies like RSTs or retransmissions."
+  ],
+  "prerequisites": ["mod4-tcp", "mod5-udp", "mod8-routing"],
+  "concept_explanation": [
+    {
+      "title": "Throughput, Goodput & Latency Metrics",
+      "summary": "Network monitoring quantifies real link and flow performance: wire throughput includes L2/L3/L4 headers, goodput counts only application payload bytes per second, and latency measures round-trip or inter-packet delay.",
+      "key_points": [
+        "Small frequent writes incur higher header-to-payload overhead than larger batched transfers.",
+        "Always compute metrics strictly from measured monotonic timestamps and byte counts — never fabricated dashboards."
+      ],
+      "protocol_layers": ["Cross-Layer Monitoring (L2–L7)"]
+    },
+    {
+      "title": "Flow Direction & Anomaly Detection",
+      "summary": "Monitoring tools group packets into bidirectional flows to observe asymmetry (e.g., downloads vs. echoes), connection spikes, unexpected RST packets, and retransmission candidates.",
+      "key_points": [
+        "Comparing packets_a_to_b vs. packets_b_to_a and payload bytes reveals traffic symmetry.",
+        "Sudden RST bursts or repeated sequence numbers signal crashes, firewall drops, or congestion."
+      ],
+      "protocol_layers": ["Flow Analysis (L4)", "Telemetry"]
+    }
+  ],
+  "experiment": {
+    "experiment_id": "net-monitor-transfer",
+    "title": "Monitor a Live Multi-Chunk TCP Data Transfer & Multi-Flow Pattern",
+    "instructions": "Executes a controlled localhost bulk TCP transfer (multiple chunks totaling ~64 KB) under LD_PRELOAD + libpcap, computing real measured duration, wire bytes, application goodput, inter-packet latency stats, and directional flow symmetry.",
+    "required_setup": [
+      "Phase 2 LD_PRELOAD tracer & Phase 4 libpcap capture helper",
+      "Localhost loopback interface"
+    ],
+    "execution_steps": [
+      "Run 'Measured Bulk TCP Transfer (~64 KB)' and review the real measured throughput, goodput, packet count, and min/avg/max inter-packet interval.",
+      "Compare against 'Multiple Concurrent TCP Flows' (Module 4/9) to see how multiple flows share loopback.",
+      "Ask the Grounded Local AI Assistant to interpret the measured flow balance and packet timing."
+    ],
+    "supported_scenarios": [
+      {
+        "scenario_id": "net-monitor-transfer",
+        "label": "1. Measured Bulk TCP Transfer (~64 KB Goodput & Latency)",
+        "description": "Transfers 16 x 4096-byte chunks over loopback TCP and computes real measured wire/payload throughput and inter-packet timing.",
+        "protocol": "TCP",
+        "default_params": { "chunks": 16, "chunk_bytes": 4096 }
+      },
+      {
+        "scenario_id": "tcp-multi-flow",
+        "label": "2. Multi-Flow Concurrent Traffic Pattern",
+        "description": "Runs 2 concurrent TCP flows to compare per-flow packet counts and directional payload symmetry.",
+        "protocol": "TCP",
+        "default_params": {}
+      }
+    ],
+    "expected_observations": [
+      "Measured wire bytes exceed application payload bytes due to IPv4 + TCP headers.",
+      "Echo traffic exhibits symmetric payload bytes in client->server and server->client directions.",
+      "All throughput and inter-packet latency figures derive strictly from real monotonic timestamps."
+    ],
+    "observation_caveats": [
+      "Loopback throughput reflects host memory/kernel copy speed, not physical Wi-Fi or Ethernet link speed.",
+      "Monotonic libpcap callback timestamps measure host capture time rather than hardware NIC timestamps."
+    ]
+  },
+  "questions": [
+    {
+      "question_id": "m9-q1",
+      "type": "multiple_choice",
+      "prompt": "Why is measured wire throughput always slightly higher than application-layer goodput for a TCP transfer?",
+      "options": [
+        "Because TCP compresses application payloads automatically.",
+        "Because wire bytes include Ethernet/IPv4/TCP headers and control packets (SYN/ACK/FIN) in addition to application payload bytes.",
+        "Because loopback doubles every payload byte.",
+        "Because goodput ignores timestamps."
+      ],
+      "correct_option_index": 1,
+      "expected_keywords": [],
+      "rubric_summary": "Wire throughput includes protocol headers and control packets; goodput counts only useful application payload.",
+      "explanation": "Goodput measures useful application payload delivered per unit time, excluding L2/L3/L4 header overhead and control/retransmitted segments."
+    },
+    {
+      "question_id": "m9-q2",
+      "type": "packet_interpretation",
+      "prompt": "If a TCP flow transfers 65,536 bytes of payload in 0.010 seconds (10 ms), what is the approximate application goodput?",
+      "options": [
+        "~6.55 KB/s",
+        "~655 KB/s",
+        "~6.55 MB/s (~52.4 Mbps)",
+        "~655 MB/s"
+      ],
+      "correct_option_index": 2,
+      "expected_keywords": [],
+      "rubric_summary": "65,536 bytes / 0.010 s = 6,553,600 bytes/s ≈ 6.55 MB/s ≈ 52.4 Mbps.",
+      "explanation": "Dividing 65,536 bytes by 0.01 seconds yields 6,553,600 bytes/sec (~6.55 MB/s), or ~52.4 megabits per second."
+    },
+    {
+      "question_id": "m9-q3",
+      "type": "short_answer",
+      "prompt": "Why might a network monitoring alert flag a sudden spike in TCP RST packets or duplicate sequence numbers on a production link?",
+      "options": [],
+      "correct_option_index": null,
+      "expected_keywords": ["loss", "congestion", "retransmission", "crash", "firewall", "reset"],
+      "rubric_summary": "RST spikes indicate abrupt crashes/firewall blocks/port scans; duplicate seq numbers indicate packet loss/retransmissions.",
+      "explanation": "Unexpected RST bursts indicate crashed processes, active firewall resets, or scans against closed ports; repeated sequence numbers indicate possible retransmissions caused by packet loss or congestion."
+    }
+  ],
+  "completion_criteria": {
+    "require_experiment_run": true,
+    "min_assessment_score_pct": 67,
+    "description": "Execute the Network Monitoring transfer experiment and score at least 67% on the assessment."
+  }
+}

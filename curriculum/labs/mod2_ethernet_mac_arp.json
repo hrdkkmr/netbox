@@ -1,0 +1,114 @@
+{
+  "lab_id": "mod2-ethernet-arp",
+  "module_number": 2,
+  "module_title": "Module 2 — Ethernet, MAC and ARP",
+  "title": "Network Interfaces, MAC Addresses, Ethernet Frames & ARP Neighbor Cache",
+  "topic": "MAC Addresses, Ethernet Frames, ARP, Broadcast vs. Unicast, Switching",
+  "difficulty": "beginner",
+  "estimated_minutes": 15,
+  "learning_objectives": [
+    "Inspect active host network interfaces and differentiate real Ethernet MAC addresses from loopback.",
+    "Explain how ARP maps an IPv4 address to a Layer 2 MAC address using broadcast requests and unicast replies.",
+    "Understand why Layer 2 Ethernet/ARP visibility depends on the physical or virtual capture interface."
+  ],
+  "prerequisites": ["mod1-foundations"],
+  "concept_explanation": [
+    {
+      "title": "Ethernet Frames & 48-Bit MAC Addresses",
+      "summary": "On local Ethernet/Wi-Fi links, Layer 2 frames carry 48-bit source and destination MAC addresses plus an EtherType field (0x0800 for IPv4, 0x0806 for ARP).",
+      "key_points": [
+        "Unicast frames target a single NIC's MAC address; broadcast frames target ff:ff:ff:ff:ff:ff.",
+        "Layer 2 switches learn which MAC address lives on each switch port by reading source MAC headers."
+      ],
+      "protocol_layers": ["Data Link (L2)", "Ethernet II"]
+    },
+    {
+      "title": "Address Resolution Protocol (ARP)",
+      "summary": "Before sending an IPv4 packet on a LAN segment, a host must know the next-hop MAC address. ARP broadcasts 'Who has IP X?' and caches the unicast reply.",
+      "key_points": [
+        "ARP operates strictly within a single Layer 2 broadcast domain (it does not cross routers).",
+        "Resolved entries appear in the OS neighbor/ARP cache (ip neigh) as REACHABLE or STALE."
+      ],
+      "protocol_layers": ["ARP (EtherType 0x0806)", "Data Link (L2)"]
+    }
+  ],
+  "experiment": {
+    "experiment_id": "net-inspect-l2",
+    "title": "Inspect Real Host Interfaces, MAC Addresses & ARP Neighbor Cache",
+    "instructions": "Run a safe, read-only Layer 2 inspection of this host's interfaces (`ip -j link`) and real OS neighbor/ARP table (`ip -j neigh`). If non-loopback traffic is present, NetBox honestly reports what is directly observable without fabricating Ethernet or ARP frames.",
+    "required_setup": [
+      "Linux iproute2 (`ip` command)",
+      "Optional: non-loopback interface with active LAN/gateway traffic"
+    ],
+    "execution_steps": [
+      "Click Run Experiment to inspect live host link-layer interfaces and ARP/neighbor entries.",
+      "Compare the loopback (`lo`) interface (00:00:00:00:00:00) against `eth0` (real MAC address and MTU 1500).",
+      "Inspect the real OS neighbor table entries (gateway IPv4 -> MAC address mappings)."
+    ],
+    "supported_scenarios": [
+      {
+        "scenario_id": "net-inspect-l2",
+        "label": "Inspect Live Interfaces & ARP Neighbor Table",
+        "description": "Reads actual Linux link-layer addresses, broadcast addresses, MTUs, and OS ARP/neighbor cache entries.",
+        "protocol": "ARP/Ethernet",
+        "default_params": {}
+      }
+    ],
+    "expected_observations": [
+      "Loopback interface `lo` reports zeroed MAC address (00:00:00:00:00:00) and large loopback MTU (65536).",
+      "Ethernet/virtual interface `eth0` reports a real 48-bit MAC address, broadcast ff:ff:ff:ff:ff:ff, and MTU 1500.",
+      "OS neighbor cache shows real IPv4-to-MAC mappings (e.g., default gateway) if recent traffic occurred."
+    ],
+    "observation_caveats": [
+      "Loopback (127.0.0.1) traffic never traverses physical Ethernet and has no real ARP exchange.",
+      "In WSL 2 NAT environments, `eth0` connects to the Hyper-V virtual switch rather than raw Wi-Fi frames; NetBox reports only genuine observed entries and never fabricates ARP packets."
+    ]
+  },
+  "questions": [
+    {
+      "question_id": "m2-q1",
+      "type": "multiple_choice",
+      "prompt": "Why is an ARP Request sent to destination MAC address ff:ff:ff:ff:ff:ff?",
+      "options": [
+        "To route the packet across the Internet to a public DNS server.",
+        "Because the sender does not yet know the target's MAC address, so it must broadcast the query to all nodes on the local L2 segment.",
+        "Because Ethernet frames cannot carry unicast IPv4 addresses.",
+        "To encrypt the payload before transmitting over Wi-Fi."
+      ],
+      "correct_option_index": 1,
+      "expected_keywords": [],
+      "rubric_summary": "Broadcast destination MAC ensures all hosts on the LAN segment receive the ARP query.",
+      "explanation": "An ARP Request uses Layer 2 broadcast (ff:ff:ff:ff:ff:ff) so every device on the local broadcast domain inspects the target IP and the owner replies with its unicast MAC."
+    },
+    {
+      "question_id": "m2-q2",
+      "type": "scenario",
+      "prompt": "Host A (192.168.1.10/24) sends an IPv4 packet to a remote server 8.8.8.8 via default gateway 192.168.1.1. Whose MAC address goes in the Ethernet destination MAC field leaving Host A?",
+      "options": [
+        "The MAC address of 8.8.8.8",
+        "The broadcast MAC ff:ff:ff:ff:ff:ff",
+        "The MAC address of the default gateway (192.168.1.1)",
+        "The loopback MAC 00:00:00:00:00:00"
+      ],
+      "correct_option_index": 2,
+      "expected_keywords": [],
+      "rubric_summary": "Destination IP stays 8.8.8.8, while destination MAC is the local next-hop router (default gateway).",
+      "explanation": "Layer 2 MAC addresses only carry frames across a single hop. For off-subnet destinations, the Ethernet destination MAC is the default gateway's MAC address while IP destination stays 8.8.8.8."
+    },
+    {
+      "question_id": "m2-q3",
+      "type": "short_answer",
+      "prompt": "Why does capturing traffic on Linux loopback (`lo`) show zeroed MAC addresses and no ARP packets?",
+      "options": [],
+      "correct_option_index": null,
+      "expected_keywords": ["loopback", "kernel", "local", "physical", "arp"],
+      "rubric_summary": "Loopback stays inside the host kernel without an Ethernet LAN or next-hop MAC resolution.",
+      "explanation": "Loopback traffic never leaves the host kernel onto an Ethernet medium, so no ARP resolution or physical NIC MAC addressing takes place."
+    }
+  ],
+  "completion_criteria": {
+    "require_experiment_run": true,
+    "min_assessment_score_pct": 67,
+    "description": "Run the Layer 2 interface/ARP inspection and score at least 67% on the assessment."
+  }
+}

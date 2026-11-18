@@ -34,28 +34,40 @@ export class NetBoxSidebarProvider implements vscode.TreeDataProvider<NetBoxSide
   getChildren(): Thenable<NetBoxSidebarItem[]> {
     return Promise.resolve([
       new NetBoxSidebarItem(
-        "Open Dashboard",
+        "Welcome & Setup",
         "netbox.openDashboard",
-        "dashboard",
-        "Open the NetBox Project Overview & Controls Dashboard"
+        "home",
+        "Open NetBox Welcome, Component Readiness & Backend Setup"
       ),
       new NetBoxSidebarItem(
-        "Open Visualizer",
+        "Open NetBox Workspace",
         "netbox.openVisualizer",
         "graph",
-        "Open the NetBox Event & Topology Visualizer"
+        "Open Visualizer, Packet Inspector, Curriculum Labs & Local AI Tutor"
       ),
       new NetBoxSidebarItem(
-        "Check Backend Connection",
+        "Start Guided Tour",
+        "netbox.startGuidedTour",
+        "compass",
+        "Launch the 10-step interactive NetBox walkthrough and first TCP experiment"
+      ),
+      new NetBoxSidebarItem(
+        "Presentation / Demo Mode",
+        "netbox.startPresentationMode",
+        "device-camera-video",
+        "Launch uncluttered step-by-step presenter mode for live demonstrations"
+      ),
+      new NetBoxSidebarItem(
+        "Configure Backend & Token",
+        "netbox.configureBackend",
+        "key",
+        "Set local or LAN NetBox Host URL and store access token in SecretStorage"
+      ),
+      new NetBoxSidebarItem(
+        "Check Backend Status",
         "netbox.checkBackend",
         "pulse",
-        "Ping the local NetBox FastAPI backend"
-      ),
-      new NetBoxSidebarItem(
-        "Show Project Information",
-        "netbox.showProjectInfo",
-        "info",
-        "Display current phase and metadata"
+        "Verify backend connectivity, authentication, capture, and AI readiness"
       ),
     ]);
   }

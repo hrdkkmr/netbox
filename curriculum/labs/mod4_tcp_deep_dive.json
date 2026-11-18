@@ -1,0 +1,143 @@
+{
+  "lab_id": "mod4-tcp",
+  "module_number": 4,
+  "module_title": "Module 4 — TCP",
+  "title": "TCP Handshake, Byte-Stream Sequence/ACK Numbers, Flow Control, FIN & RST",
+  "topic": "TCP 3-Way Handshake, Seq/Ack, Sliding Window, Retransmissions, FIN vs. RST, Multi-Flow",
+  "difficulty": "intermediate",
+  "estimated_minutes": 25,
+  "learning_objectives": [
+    "Trace SYN, SYN+ACK, and ACK packets and verify sequence/acknowledgement number progression.",
+    "Distinguish graceful connection termination (FIN/ACK) from abrupt termination (RST) and refused connections (ECONNREFUSED).",
+    "Analyze multiple concurrent TCP flows using bidirectional 4-tuple isolation."
+  ],
+  "prerequisites": ["mod1-foundations", "mod3-ip-subnetting"],
+  "concept_explanation": [
+    {
+      "title": "Three-Way Handshake & Byte-Stream Numbering",
+      "summary": "TCP establishes synchronized full-duplex state with SYN -> SYN+ACK -> ACK. Sequence numbers count transmitted stream bytes (plus 1 phantom byte for SYN and FIN), NOT message IDs.",
+      "key_points": [
+        "SYN carries the sender's Initial Sequence Number (ISN); the peer acknowledges with ACK = ISN + 1.",
+        "When a segment carries L payload bytes starting at sequence S, the receiver's cumulative ACK advances to S + L.",
+        "The advertised TCP window size implements receiver-driven flow control."
+      ],
+      "protocol_layers": ["Transport (TCP / L4)"]
+    },
+    {
+      "title": "Graceful FIN vs. Abrupt RST Termination",
+      "summary": "TCP closes each sending half independently with FIN/ACK. In contrast, RST immediately aborts a connection (e.g., connecting to a closed port or closing with SO_LINGER timeout=0).",
+      "key_points": [
+        "Connecting to an unbound port produces a kernel RST+ACK packet and ECONNREFUSED in connect().",
+        "Multiple concurrent clients create separate 4-tuple flows distinguished by their ephemeral client ports."
+      ],
+      "protocol_layers": ["Transport (TCP / L4)"]
+    }
+  ],
+  "experiment": {
+    "experiment_id": "tcp-echo",
+    "title": "Run Controlled TCP Protocol Scenarios (Complete, Refused, Multi-Transfer, RST, Multi-Flow)",
+    "instructions": "Select a TCP scenario below and execute it. NetBox captures real socket API calls and real TCP packets on loopback, runs the Phase 4 TCP flow analyzer, and lets you interrogate the exact packets with the Grounded Local AI Assistant.",
+    "required_setup": [
+      "Phase 2 LD_PRELOAD tracer",
+      "Phase 4 libpcap packet capture helper with cap_net_raw"
+    ],
+    "execution_steps": [
+      "Run 'Complete TCP Echo' and inspect the 3-way handshake, PSH+ACK data packets, and FIN termination in the Packets & TCP Flows tabs.",
+      "Run 'Connection Refused (Closed Port)' and observe SYN -> RST+ACK and ECONNREFUSED.",
+      "Run 'Abrupt Termination (RST)' and 'Multiple Concurrent Flows' to compare graceful vs. abrupt close and multi-flow isolation."
+    ],
+    "supported_scenarios": [
+      {
+        "scenario_id": "tcp-echo",
+        "label": "1. Complete TCP Handshake & Graceful FIN",
+        "description": "Standard TCP echo with 3-way handshake, bidirectional data transfer, and graceful FIN/ACK teardown.",
+        "protocol": "TCP",
+        "default_params": { "message": "TCP Seq/Ack Lab Payload!" }
+      },
+      {
+        "scenario_id": "tcp-conn-refused",
+        "label": "2. Failed Connection (ECONNREFUSED / RST)",
+        "description": "Client connects to a closed localhost port; observes real ECONNREFUSED socket error and kernel RST+ACK packet.",
+        "protocol": "TCP",
+        "default_params": {}
+      },
+      {
+        "scenario_id": "tcp-multi-transfer",
+        "label": "3. Multiple Data Transfers on One Flow",
+        "description": "Sends 4 sequential application chunks on one TCP connection to observe cumulative sequence/ACK progression.",
+        "protocol": "TCP",
+        "default_params": {}
+      },
+      {
+        "scenario_id": "tcp-abrupt-rst",
+        "label": "4. Abrupt Termination (TCP RST via SO_LINGER)",
+        "description": "Establishes TCP connection, exchanges data, then aborts abruptly with a real TCP RST packet.",
+        "protocol": "TCP",
+        "default_params": {}
+      },
+      {
+        "scenario_id": "tcp-multi-flow",
+        "label": "5. Multiple Concurrent TCP Flows",
+        "description": "Two concurrent TCP clients connect to the server simultaneously so students inspect 2 distinct 4-tuple flows.",
+        "protocol": "TCP",
+        "default_params": {}
+      }
+    ],
+    "expected_observations": [
+      "Complete TCP echo shows handshake status COMPLETE (SYN, SYN+ACK, ACK) and COMPLETE_FIN_EXCHANGE.",
+      "Connection refused shows connect() returning -1 (ECONNREFUSED) and RST packet with incomplete handshake.",
+      "Multi-flow scenario produces 2 distinct flow_ids with distinct client ephemeral ports."
+    ],
+    "observation_caveats": [
+      "TCP sequence numbers are absolute 32-bit integers on the wire; compare adjacent packet deltas to verify byte-stream progression.",
+      "Localhost loopback rarely drops packets, so retransmissions are normally 0 unless artificially induced."
+    ]
+  },
+  "questions": [
+    {
+      "question_id": "m4-q1",
+      "type": "packet_interpretation",
+      "prompt": "A client sends a TCP PSH+ACK segment with seq=1001 and payload_length=29. Assuming no packet loss, what acknowledgement number should the server send back?",
+      "options": [
+        "1001",
+        "1002",
+        "1030",
+        "29"
+      ],
+      "correct_option_index": 2,
+      "expected_keywords": [],
+      "rubric_summary": "Cumulative ACK = received sequence number + payload length = 1001 + 29 = 1030.",
+      "explanation": "TCP ACKs indicate the next expected byte offset in the stream: 1001 + 29 = 1030."
+    },
+    {
+      "question_id": "m4-q2",
+      "type": "multiple_choice",
+      "prompt": "What happens at the packet layer when a TCP client calls connect() to a localhost port where no server is listening?",
+      "options": [
+        "The server accepts the connection and immediately sends FIN.",
+        "The client sends SYN, the kernel replies with RST+ACK, and connect() fails with ECONNREFUSED.",
+        "The OS automatically switches the socket to UDP.",
+        "No packet is transmitted on loopback."
+      ],
+      "correct_option_index": 1,
+      "expected_keywords": [],
+      "rubric_summary": "Kernel responds to SYN on an unbound port with RST+ACK, surfacing ECONNREFUSED.",
+      "explanation": "TCP rejects connection attempts to closed ports by replying with RST+ACK, causing the client's connect() syscall to return -1 with errno=ECONNREFUSED."
+    },
+    {
+      "question_id": "m4-q3",
+      "type": "short_answer",
+      "prompt": "Why does TCP need a separate FIN from BOTH endpoints for graceful full-duplex teardown, unlike a single RST?",
+      "options": [],
+      "correct_option_index": null,
+      "expected_keywords": ["half", "duplex", "direction", "both", "fin", "rst"],
+      "rubric_summary": "TCP is full-duplex; each FIN closes only one sending direction while allowing buffered peer data to finish.",
+      "explanation": "Because TCP is full-duplex, one endpoint's FIN only signals it has no more data to send (half-close); the peer may still finish sending data before sending its own FIN. RST aborts both directions immediately."
+    }
+  ],
+  "completion_criteria": {
+    "require_experiment_run": true,
+    "min_assessment_score_pct": 67,
+    "description": "Execute at least one TCP scenario and score at least 67% on the assessment."
+  }
+}

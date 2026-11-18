@@ -1,15 +1,44 @@
 {
   "name": "netbox-vscode",
-  "displayName": "NetBox — Computer Networks Assistant",
-  "description": "Visual networking development and debugging environment for Computer Networks.",
-  "version": "0.1.0",
+  "displayName": "NetBox",
+  "description": "An AI-assisted Computer Networks learning environment that lets students run real networking experiments, inspect socket operations and packets, visualize network activity, and understand concepts through an evidence-grounded AI tutor.",
+  "version": "0.8.0",
   "publisher": "netbox",
+  "license": "MIT",
+  "icon": "media/netbox-icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hrdkkmr/netbox.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hrdkkmr/netbox/issues"
+  },
+  "homepage": "https://github.com/hrdkkmr/netbox#readme",
+  "galleryBanner": {
+    "color": "#0F172A",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Other",
+    "Education",
+    "Visualization",
+    "Debuggers",
     "Programming Languages"
+  ],
+  "keywords": [
+    "computer-networks",
+    "networking",
+    "tcp",
+    "udp",
+    "packet-capture",
+    "libpcap",
+    "sockets",
+    "visualizer",
+    "ollama",
+    "local-ai",
+    "education"
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
@@ -17,22 +46,37 @@
     "commands": [
       {
         "command": "netbox.openDashboard",
-        "title": "NetBox: Open Dashboard",
+        "title": "Open Welcome & Setup",
         "category": "NetBox"
       },
       {
         "command": "netbox.openVisualizer",
-        "title": "NetBox: Open Visualizer",
+        "title": "Open Visualizer",
+        "category": "NetBox"
+      },
+      {
+        "command": "netbox.startGuidedTour",
+        "title": "Start Guided Tour",
+        "category": "NetBox"
+      },
+      {
+        "command": "netbox.startPresentationMode",
+        "title": "Start Presentation / Demo Mode",
+        "category": "NetBox"
+      },
+      {
+        "command": "netbox.configureBackend",
+        "title": "Configure Backend & Access Token",
         "category": "NetBox"
       },
       {
         "command": "netbox.checkBackend",
-        "title": "NetBox: Check Backend Connection",
+        "title": "Check Backend Connection",
         "category": "NetBox"
       },
       {
         "command": "netbox.showProjectInfo",
-        "title": "NetBox: Show Project Information",
+        "title": "Show Project Information",
         "category": "NetBox"
       }
     ],
@@ -59,16 +103,37 @@
         "netbox.backendUrl": {
           "type": "string",
           "default": "http://127.0.0.1:8000",
-          "description": "Base URL of the local NetBox backend service."
+          "description": "Base HTTP(S) URL of your local (http://127.0.0.1:8000) or LAN NetBox FastAPI backend. Access tokens are stored securely in VS Code SecretStorage via 'NetBox: Configure Backend & Access Token'."
+        },
+        "netbox.connectionTimeoutMs": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 1000,
+          "maximum": 60000,
+          "description": "Default HTTP connection timeout in milliseconds for NetBox backend requests."
+        },
+        "netbox.healthCheckIntervalMs": {
+          "type": "number",
+          "default": 10000,
+          "minimum": 3000,
+          "maximum": 120000,
+          "description": "Periodic connection health-check interval in milliseconds."
+        },
+        "netbox.verifyConnectionOnStartup": {
+          "type": "boolean",
+          "default": true,
+          "description": "Verify NetBox backend reachability and component readiness when opening the Welcome panel."
         }
       }
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run build",
+    "vscode:prepublish": "npm run build -- --production",
     "build": "node esbuild.js",
     "watch": "node esbuild.js --watch",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "node --test tests/*.test.js",
+    "package": "npx --yes @vscode/vsce package"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

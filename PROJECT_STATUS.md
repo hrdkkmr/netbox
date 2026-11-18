@@ -1,8 +1,8 @@
 # NetBox — Project Status & Handoff Guide
 
 > **Last Updated:** 2026-11-18  
-> **Current State:** **Phase 2 Completed & Verified** — Ready for **Phase 3 (Networking Visualizer)** upon user approval.  
-> **Purpose of this File:** Single-source-of-truth status and handoff document so development can resume seamlessly after moving the project folder or starting a new session.
+> **Current State:** **Phases 0–8 Packaged & Verified (`v0.8.0`)** — Ready for Marketplace Publisher Configuration & Final Public Release Approval (Phase 8.8 / 8.9).  
+> **Purpose of this File:** Single-source-of-truth status and handoff document so development or demonstration can resume seamlessly.
 
 ---
 
@@ -11,13 +11,14 @@
 | Phase | Title | Status | Summary |
 | :--- | :--- | :--- | :--- |
 | **Phase 0** | Foundation | **Completed** | Indexed all 9 PDFs in `cn_lab/`, audited WSL environment, wrote architecture/roadmap/schema/decisions docs, built and verified C TCP echo server & client (`examples/tcp/`). |
-| **Phase 1** | VS Code Extension Foundation | **Completed (Pending Linux Node.js Build)** | Scaffolded TypeScript + `esbuild` VS Code extension (`extension/`), Dashboard & Visualizer Webviews (vanilla HTML/CSS/JS, strict CSP), and FastAPI backend (`backend/`). *Pending: Installing Node.js LTS inside Ubuntu WSL via `nvm` to run `npm install && npm run build` and test in Extension Development Host.* |
-| **Phase 2** | C Program Execution & Real Socket Event Collection | **Completed & Verified** | Built `LD_PRELOAD` shared library (`instrumentation/libnetbox_trace.so`) intercepting 12 POSIX socket calls, backend `ProcessRunner` / `RunManager` / `EventReader`, REST `/api/runs` endpoints, visualizer live-run wiring, and automated test suites (Tests A–G + 7 backend tests all passing). |
-| **Phase 3** | Networking Visualizer | **Not Started (Next)** | Socket state machine (`LISTEN`, `ESTABLISHED`, `CLOSED`), interactive Client ↔ Server sequence diagram, inter-event timing/latency analysis, filtering/search. |
-| **Phase 4** | Packet Capture Layer | **Not Started** | Wire-level capture (`libpcap`/`tcpdump`) producing `source: "packet_capture"` events correlated with `socket_api`. |
-| **Phase 5** | Grounded Local AI Assistant | **Not Started** | Local LLM (e.g., Ollama) explaining real recorded telemetry grounded in source code and `cn_lab/` context. |
-| **Phase 6** | NetBox Core & LAN Integration | **Not Started** | Shared offline classroom host / hotspot services and LLM endpoint. |
-| **Phase 7** | Testing & Finalization | **Not Started** | End-to-end validation, packaging, and final project documentation. |
+| **Phase 1** | VS Code Extension Foundation | **Built & Compiled** | Installed native Linux Node.js LTS (`v26.13.1`) via `nvm` in WSL 2; `npm run check-types` and `npm run build` produce `extension/dist/extension.js` cleanly; FastAPI backend verified. |
+| **Phase 2** | C Program Execution & Real Socket Event Collection | **Completed & Regression-Verified** | Built `LD_PRELOAD` shared library (`instrumentation/libnetbox_trace.so`) intercepting 12 POSIX socket calls, backend `ProcessRunner` / `RunManager` / `EventReader`, REST `/api/runs` endpoints, and automated test suites (Tests A–G all passing). |
+| **Phase 3** | Networking Visualizer | **Completed & Verified** | Modular frontend engines (`extension/media/visualizer/*.js`), dynamic topology with separate listening/accepted/client socket states, API-level sequence diagram, monotonic timing & A↔B interval analysis, non-destructive filters, timestamp-aware playback (`0.5x`–`4x`), and deterministic event inspector. |
+| **Phase 4** | Packet Capture Layer | **Completed & Live-Verified** | Native C `libpcap` helper (`packet_capture/netbox_pcap` with `cap_net_raw,cap_net_admin=eip`), IPv4/TCP parser, handshake/termination/flow/retransmission analyzer, conservative 4-tuple monotonic correlator, header-only privacy default, and visualizer Packets/Flows/Correlations/Dual-Layer Replay tabs. |
+| **Phase 5** | Grounded Local AI Assistant | **Completed & Live-Verified** | Three-layer grounded local AI architecture (`backend/app/ai/`), local Ollama provider live-verified with `qwen2.5-coder:1.5b` on `127.0.0.1:11434`, deterministic retrieval & flow isolation, compact `<OBSERVED_EVIDENCE_DATA_ONLY>` framing, citation & confidence validation, Learning Mode, and visualizer AI Assistant tab with verified clickable evidence links. |
+| **Phase 6** | NetBox Core & LAN Integration | **Completed & Software-Verified** | Configurable localhost/LAN backend, Windows + WSL 2 NAT discovery & opt-in forwarding script, pairing token access control, independent component health APIs, offline SVG QR code, FastAPI-served standalone Browser UI (`GET /`), startup/stop/check management scripts, and System & LAN Dashboard tab. *(Physical second-device test pending physical device.)* |
+| **Phase 7** | Curriculum Labs & Final Hardening | **Completed & Live-Verified** | 9 structured JSON CN curriculum modules (`curriculum/labs/`), compiled C POSIX UDP echo server/client (`examples/udp/`), safe allowlisted lab runner (TCP/UDP/DNS/HTTP/L2/L3/Monitoring), deterministic IPv4 Subnet Calculator, 5-mode grounded Curriculum AI Tutor, deterministic assessment grader + persisted JSON progress, polished 7-tab UI, and final docs. |
+| **Phase 8** | Production Release & VS Code Marketplace Packaging | **Packaged & Verified (Awaiting Publisher & Approval)** | Release audit, `v0.8.0` Marketplace metadata & 256×256 PNG icon, VS Code `SecretStorage` token security + URL validation, 7-component Welcome & Setup Hub, 10-step Interactive Guided Tour + Step 9 live TCP experiment, Presentation / Demo Mode, `.vscodeignore`, `LICENSE`, `CHANGELOG.md`, `extension/README.md`, clean `.vsix` build (`netbox-vscode-0.8.0.vsix`) & real VS Code CLI install verification. **79/79 automated tests passing.** |
 
 ---
 

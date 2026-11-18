@@ -1,165 +1,136 @@
-// NetBox Dashboard Client Logic
-
+// NetBox Welcome & Component Readiness Dashboard Client Logic (Phase 8)
 (function () {
   // @ts-ignore
   const vscode = acquireVsCodeApi();
 
-  // Elements
-  const backendBadge = document.getElementById("backend-status-badge");
-  const backendBadgeText = backendBadge?.querySelector(".status-label");
-  const backendUrlVal = document.getElementById("backend-url-val");
-  const backendConnStatus = document.getElementById("backend-conn-status");
-  const backendServiceVal = document.getElementById("backend-service-val");
-  const backendVersionVal = document.getElementById("backend-version-val");
-  const backendInstructions = document.getElementById("backend-instructions");
-  const btnRecheck = document.getElementById("btn-recheck-backend");
+  const badge = document.getElementById("backend-status-badge");
+  const badgeLabel = badge?.querySelector(".status-label");
+  const summaryBanner = document.getElementById("readiness-summary-banner");
 
-  const btnOpenVisualizer = document.getElementById("btn-open-visualizer");
-  const btnRunDemo = document.getElementById("btn-run-demo");
-  const demoStatus = document.getElementById("demo-status");
-  const demoStatusText = document.getElementById("demo-status-text");
+  const compUrl = document.getElementById("comp-url");
+  const compReach = document.getElementById("comp-reach");
+  const compAuth = document.getElementById("comp-auth");
+  const compSock = document.getElementById("comp-sock");
+  const compPcap = document.getElementById("comp-pcap");
+  const compAi = document.getElementById("comp-ai");
 
-  const openServerFile = document.getElementById("open-server-file");
-  const openClientFile = document.getElementById("open-client-file");
-  const openReadmeFile = document.getElementById("open-readme-file");
-
-  // Attach Event Handlers
-  btnRecheck?.addEventListener("click", () => {
-    if (backendBadgeText) {
-      backendBadgeText.textContent = "Checking...";
-    }
-    if (backendBadge) {
-      backendBadge.className = "status-badge connecting";
-    }
+  document.getElementById("btn-recheck-backend")?.addEventListener("click", () => {
+    if (badgeLabel) badgeLabel.textContent = "Checking...";
+    if (badge) badge.className = "status-badge connecting";
     vscode.postMessage({ type: "checkBackend" });
   });
 
-  btnOpenVisualizer?.addEventListener("click", () => {
+  document.getElementById("btn-open-visualizer")?.addEventListener("click", () => {
     vscode.postMessage({ type: "openVisualizer" });
   });
 
-  btnRunDemo?.addEventListener("click", () => {
-    if (!demoStatus || !demoStatusText) return;
-
-    demoStatus.className = "execution-status-box running";
-    demoStatusText.textContent = "Running Phase 1 simulated TCP exchange...";
-
-    setTimeout(() => {
-      demoStatus.className = "execution-status-box success";
-      demoStatusText.textContent = "Simulation completed: 12 events generated. Opening visualizer...";
-      setTimeout(() => {
-        vscode.postMessage({ type: "openVisualizer" });
-      }, 700);
-    }, 1200);
+  document.getElementById("btn-start-tour")?.addEventListener("click", () => {
+    vscode.postMessage({ type: "startGuidedTour" });
   });
 
-  openServerFile?.addEventListener("click", () => {
-    vscode.postMessage({ type: "openFile", payload: { filePath: "examples/tcp/server.c" } });
+  document.getElementById("btn-configure-backend")?.addEventListener("click", () => {
+    vscode.postMessage({ type: "configureBackend" });
   });
 
-  openClientFile?.addEventListener("click", () => {
-    vscode.postMessage({ type: "openFile", payload: { filePath: "examples/tcp/client.c" } });
+  document.getElementById("btn-presentation-mode")?.addEventListener("click", () => {
+    vscode.postMessage({ type: "startPresentationMode" });
   });
 
-  openReadmeFile?.addEventListener("click", () => {
-    vscode.postMessage({ type: "openFile", payload: { filePath: "examples/tcp/README.md" } });
+  document.getElementById("btn-view-docs")?.addEventListener("click", () => {
+    vscode.postMessage({ type: "openDocs" });
   });
 
-  // Handle incoming messages from extension host
-  window.addEventListener("message", (event) => {
-    const message = event.data;
-    if (!message || !message.type) return;
+  function setStatus(el, text, ok) {
+    if (!el) return;
+    el.textContent = text;
+    el.style.color = ok === true ? "var(--success-color, #34d399)" : ok === false ? "var(--error-color, #f87171)" : "#fbbf24";
+  }
 
-    switch (message.type) {
-      case "backendStatus":
-        updateBackendStatus(message.payload);
-        break;
+  function renderReadiness(r) {
+    if (!r) return;
+    if (compUrl) compUrl.textContent = r.backendUrl || "http://127.0.0.1:8000";
 
-      case "projectInfo":
-        updateProjectInfo(message.payload);
-        break;
-
-      case "examplesList":
-        updateExamplesList(message.payload);
-        break;
-
-      case "errorMessage":
-        console.error("[NetBox Webview]", message.payload?.message);
-        break;
-    }
-  });
-
-  function updateBackendStatus(payload) {
-    if (!payload) return;
-
-    if (backendUrlVal) {
-      backendUrlVal.textContent = payload.url || "http://127.0.0.1:8000";
+    if (!r.backendConfigured) {
+      if (badge) badge.className = "status-badge offline";
+      if (badgeLabel) badgeLabel.textContent = "Invalid Backend URL";
+      setStatus(compReach, "Not checked (invalid URL)", false);
+      setStatus(compAuth, "—", false);
+      setStatus(compSock, "Unavailable", false);
+      setStatus(compPcap, "Unavailable", false);
+      setStatus(compAi, "Unavailable", false);
+      if (summaryBanner) {
+        summaryBanner.classList.remove("hidden");
+        summaryBanner.textContent = r.errorDetail || "Configure a valid http:// or https:// NetBox backend URL.";
+      }
+      return;
     }
 
-    if (payload.connected) {
-      if (backendBadge) {
-        backendBadge.className = "status-badge online";
+    if (!r.backendReachable) {
+      if (badge) badge.className = "status-badge offline";
+      if (badgeLabel) badgeLabel.textContent = "Backend Unreachable";
+      setStatus(compReach, `Offline (${r.errorDetail || "connection refused"})`, false);
+      setStatus(compAuth, r.hasStoredToken ? "Token stored (unverified while offline)" : "No token stored", null);
+      setStatus(compSock, "Unavailable (backend offline)", false);
+      setStatus(compPcap, "Unavailable (backend offline)", false);
+      setStatus(compAi, "Unavailable (backend offline)", false);
+      if (summaryBanner) {
+        summaryBanner.classList.remove("hidden");
+        summaryBanner.textContent =
+          "Backend is not reachable. Start your local NetBox host with './scripts/start_netbox.sh' or click 'Connect to NetBox Backend' to point at a LAN host.";
       }
-      if (backendBadgeText) {
-        backendBadgeText.textContent = "Backend Online";
-      }
-      if (backendConnStatus) {
-        backendConnStatus.textContent = "Connected (200 OK)";
-        backendConnStatus.style.color = "var(--success-color)";
-      }
-      if (backendServiceVal) {
-        backendServiceVal.textContent = payload.service || "netbox-backend";
-      }
-      if (backendVersionVal) {
-        backendVersionVal.textContent = payload.version || "0.1.0";
-      }
-      if (backendInstructions) {
-        backendInstructions.classList.add("hidden");
-      }
+      return;
+    }
+
+    setStatus(compReach, `Reachable (v${r.backendVersion || "0.8.0"}, ${r.mode || "localhost"} mode)`, true);
+
+    if (r.authenticated) {
+      setStatus(compAuth, r.hasStoredToken ? "Authenticated (SecretStorage token)" : "Authenticated (Localhost)", true);
     } else {
-      if (backendBadge) {
-        backendBadge.className = "status-badge offline";
+      setStatus(compAuth, `Auth Required / Failed (${r.errorDetail || "401 Unauthorized"})`, false);
+    }
+
+    const sockOk = r.socketInstrumentation && r.socketInstrumentation.status === "running";
+    setStatus(compSock, `${(r.socketInstrumentation?.status || "unavailable").toUpperCase()} — ${r.socketInstrumentation?.detail || ""}`, sockOk ? true : null);
+
+    const pcapOk = r.packetCapture && r.packetCapture.status === "running";
+    setStatus(compPcap, `${(r.packetCapture?.status || "unavailable").toUpperCase()} — ${r.packetCapture?.detail || ""}`, pcapOk ? true : null);
+
+    const aiReady = r.ollama?.status === "running" && r.aiModel?.status === "running";
+    const aiText = aiReady
+      ? `READY — ${r.aiModel?.detail || "Ollama ready"}`
+      : `${(r.ollama?.status || "unavailable").toUpperCase()} — ${r.aiModel?.detail || r.ollama?.detail || "Ollama unavailable"}`;
+    setStatus(compAi, aiText, aiReady ? true : null);
+
+    const fullyReady = r.backendReachable && r.authenticated && sockOk && pcapOk && aiReady;
+    if (!r.authenticated) {
+      if (badge) badge.className = "status-badge offline";
+      if (badgeLabel) badgeLabel.textContent = "Auth Required";
+      if (summaryBanner) {
+        summaryBanner.classList.remove("hidden");
+        summaryBanner.textContent =
+          "Backend is reachable, but LAN authentication failed. Click 'Connect to NetBox Backend' to enter the host pairing token securely.";
       }
-      if (backendBadgeText) {
-        backendBadgeText.textContent = "Backend Offline";
-      }
-      if (backendConnStatus) {
-        backendConnStatus.textContent = "Offline / Unreachable";
-        backendConnStatus.style.color = "var(--error-color)";
-      }
-      if (backendServiceVal) {
-        backendServiceVal.textContent = "—";
-      }
-      if (backendVersionVal) {
-        backendVersionVal.textContent = "—";
-      }
-      if (backendInstructions) {
-        backendInstructions.classList.remove("hidden");
+    } else if (fullyReady) {
+      if (badge) badge.className = "status-badge online";
+      if (badgeLabel) badgeLabel.textContent = "All Systems Ready";
+      if (summaryBanner) summaryBanner.classList.add("hidden");
+    } else {
+      if (badge) badge.className = "status-badge connecting";
+      if (badgeLabel) badgeLabel.textContent = "Connected (Partial Components)";
+      if (summaryBanner) {
+        summaryBanner.classList.remove("hidden");
+        summaryBanner.textContent =
+          "Backend is connected, though optional components (packet capture or local Ollama AI) are not fully active. Core labs and visualization remain usable.";
       }
     }
   }
 
-  function updateProjectInfo(payload) {
-    if (!payload) return;
-    const descEl = document.getElementById("project-description");
-    const phaseEl = document.getElementById("current-phase-val");
-
-    if (descEl && payload.description) {
-      descEl.textContent = payload.description;
+  window.addEventListener("message", (event) => {
+    const msg = event.data;
+    if (msg && msg.type === "readinessReport") {
+      renderReadiness(msg.payload);
     }
-    if (phaseEl && payload.current_phase) {
-      phaseEl.textContent = payload.current_phase;
-    }
-  }
+  });
 
-  function updateExamplesList(examples) {
-    if (!Array.isArray(examples)) return;
-    const countEl = document.getElementById("examples-count");
-    if (countEl) {
-      countEl.textContent = `${examples.length} available`;
-    }
-  }
-
-  // Initial trigger to fetch status
   vscode.postMessage({ type: "checkBackend" });
 })();

@@ -1,0 +1,114 @@
+{
+  "lab_id": "mod8-routing",
+  "module_number": 8,
+  "module_title": "Module 8 — Routing and Network Troubleshooting",
+  "title": "Routing Tables, Default Routes, ICMP Reachability & Failure Diagnosis",
+  "topic": "Routing Tables, Default Routes, Static Routing, Traceroute, ICMP, Network Failures",
+  "difficulty": "intermediate",
+  "estimated_minutes": 20,
+  "learning_objectives": [
+    "Read a real Linux IPv4 routing table and apply longest-prefix match to choose an outgoing route.",
+    "Distinguish local-link routes, default routes (0.0.0.0/0), and gateway next hops.",
+    "Use ICMP echo reachability probes and connection failure codes to diagnose unreachable destinations safely."
+  ],
+  "prerequisites": ["mod3-ip-subnetting"],
+  "concept_explanation": [
+    {
+      "title": "Routing Tables & Longest-Prefix Match",
+      "summary": "Routers and hosts forward IPv4 packets by consulting their routing table and choosing the matching prefix with the longest subnet mask (most specific route). If no specific route matches, the default route (0.0.0.0/0) is used.",
+      "key_points": [
+        "Directly connected subnets (`scope link`) deliver packets straight to the destination MAC via ARP.",
+        "Remote prefixes forward to a `via <gateway_ip>` next hop.",
+        "NetBox inspects routing tables strictly read-only — it NEVER modifies your OS routes."
+      ],
+      "protocol_layers": ["Network (IPv4 Routing / L3)"]
+    },
+    {
+      "title": "ICMP, Ping & Traceroute Troubleshooting",
+      "summary": "ICMP (Internet Control Message Protocol) reports reachability and errors: Echo Request/Reply (ping), Time Exceeded (traceroute TTL expiration), and Destination Unreachable.",
+      "key_points": [
+        "Traceroute sends probes with incrementing IPv4 TTL (1, 2, 3...) so each intermediate router decrements TTL to 0 and replies with ICMP Time Exceeded.",
+        "Firewalls or restricted containers may block ICMP; a failed ping does not always mean a host is down."
+      ],
+      "protocol_layers": ["ICMP (IP Protocol 1)", "Network (IPv4)"]
+    }
+  ],
+  "experiment": {
+    "experiment_id": "routing-inspect",
+    "title": "Inspect Real OS Routing Table & Safe Local Reachability Diagnostics",
+    "instructions": "Performs a strictly read-only inspection of the host's IPv4 routing table (`ip -j -4 route`), runs a bounded loopback ICMP reachability probe (`ping -c 2 127.0.0.1` if permitted), and diagnoses an unreachable closed TCP port.",
+    "required_setup": [
+      "Linux `ip` command (read-only)",
+      "Optional: `ping` utility for local ICMP Echo measurement"
+    ],
+    "execution_steps": [
+      "Run 'Read-Only Routing Table & Local ICMP Reachability' to inspect real routes, default gateway, and measured local RTT.",
+      "Examine which route entry handles 127.0.0.1 vs. your WSL subnet vs. external addresses (default route).",
+      "Note any permission or firewall caveats honestly reported by the diagnostic runner."
+    ],
+    "supported_scenarios": [
+      {
+        "scenario_id": "routing-inspect",
+        "label": "1. Read-Only Routing Table & Local ICMP Reachability",
+        "description": "Reads actual Linux IPv4 routes, checks default gateway, runs bounded local ping (127.0.0.1), and never alters host routes.",
+        "protocol": "IPv4/ICMP",
+        "default_params": {}
+      }
+    ],
+    "expected_observations": [
+      "Real default route (`default via <gateway> dev eth0`) and directly attached subnet route (`scope link`) appear.",
+      "Bounded loopback ICMP ping succeeds with sub-millisecond RTT (or reports honest permission limitation if ping is restricted)."
+    ],
+    "observation_caveats": [
+      "NetBox never modifies routing tables or runs external Internet traceroutes automatically.",
+      "Offline environments cannot reach public Internet hops; local gateway & loopback reachability remain testable offline."
+    ]
+  },
+  "questions": [
+    {
+      "question_id": "m8-q1",
+      "type": "scenario",
+      "prompt": "A routing table contains three entries: 0.0.0.0/0 via 10.0.0.1, 192.168.0.0/16 via 10.0.0.2, and 192.168.10.0/24 via 10.0.0.3. Which next hop is selected for destination 192.168.10.55?",
+      "options": [
+        "10.0.0.1 (default route)",
+        "10.0.0.2 (/16 route)",
+        "10.0.0.3 (/24 route — longest prefix match)",
+        "The packet is duplicated to all three gateways."
+      ],
+      "correct_option_index": 2,
+      "expected_keywords": [],
+      "rubric_summary": "Longest-prefix match selects /24 (24 matching bits) over /16 and /0.",
+      "explanation": "IP forwarding always selects the most specific matching route (longest prefix length). /24 beats /16 and /0."
+    },
+    {
+      "question_id": "m8-q2",
+      "type": "multiple_choice",
+      "prompt": "How does traceroute discover intermediate routers along a path?",
+      "options": [
+        "By reading each router's private routing table over SSH.",
+        "By sending probes with incrementing IPv4 TTL values (1, 2, 3...) and recording ICMP Time Exceeded replies from each hop.",
+        "By broadcasting ARP requests across the Internet.",
+        "By inspecting TCP window sizes."
+      ],
+      "correct_option_index": 1,
+      "expected_keywords": [],
+      "rubric_summary": "Incrementing IP TTL triggers ICMP Time Exceeded from successive routers.",
+      "explanation": "Each router decrements IPv4 TTL by 1 and drops the packet with an ICMP Time Exceeded message when TTL reaches 0, revealing that hop's IP address."
+    },
+    {
+      "question_id": "m8-q3",
+      "type": "short_answer",
+      "prompt": "Why does a 'Connection Refused' (ECONNREFUSED) error actually prove that IP routing to the target host succeeded?",
+      "options": [],
+      "correct_option_index": null,
+      "expected_keywords": ["rst", "reached", "host", "port", "reply"],
+      "rubric_summary": "Receiving RST from the destination host proves packets reached it and returned; only the target port had no listener.",
+      "explanation": "ECONNREFUSED occurs because the destination host received the SYN and actively replied with a TCP RST+ACK — proving L3 routing worked and the issue is no process listening on that port."
+    }
+  ],
+  "completion_criteria": {
+    "require_experiment_run": true,
+    "min_assessment_score_pct": 67,
+    "description": "Run the routing & reachability inspection and score at least 67% on the assessment."
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "lab_id": "mod5-udp",
+  "module_number": 5,
+  "module_title": "Module 5 — UDP",
+  "title": "Connectionless Datagrams, Message Boundaries & TCP vs. UDP",
+  "topic": "Connectionless Transport, UDP Headers, Datagram Boundaries, Ports, TCP vs. UDP",
+  "difficulty": "intermediate",
+  "estimated_minutes": 20,
+  "learning_objectives": [
+    "Observe connectionless UDP socket calls (socket SOCK_DGRAM, bind, sendto, recvfrom, close) with no handshake.",
+    "Verify that UDP preserves discrete application datagram boundaries across varied payload sizes.",
+    "Compare UDP behavior against TCP when the server is unavailable."
+  ],
+  "prerequisites": ["mod4-tcp"],
+  "concept_explanation": [
+    {
+      "title": "Connectionless Transport & Minimal 8-Byte Header",
+      "summary": "UDP provides best-effort, message-oriented delivery with only an 8-byte header (source port, destination port, length, checksum). There is no handshake, no sequence tracking, and no retransmission.",
+      "key_points": [
+        "A UDP server does NOT call listen() or accept(); it binds and loops on recvfrom()/sendto().",
+        "Each sendto() transmits one discrete datagram; each recvfrom() receives one discrete datagram (message boundaries are preserved)."
+      ],
+      "protocol_layers": ["Transport (UDP / L4)"]
+    },
+    {
+      "title": "TCP vs. UDP Trade-Offs",
+      "summary": "TCP prioritizes ordered, reliable byte streams; UDP prioritizes low latency and minimal overhead for protocols like DNS, VoIP, QUIC, and telemetry.",
+      "key_points": [
+        "Sending a UDP datagram to an unbound port succeeds locally at sendto() — the client only discovers unavailability via timeout or ICMP Port Unreachable.",
+        "UDP leaves reliability, ordering, and congestion control to the application layer."
+      ],
+      "protocol_layers": ["Transport (UDP vs. TCP)"]
+    }
+  ],
+  "experiment": {
+    "experiment_id": "udp-echo",
+    "title": "Run C POSIX UDP Echo & Multi-Datagram Experiments",
+    "instructions": "Execute the compiled C POSIX UDP server and client (`examples/udp/`) under LD_PRELOAD socket tracing and libpcap UDP capture.",
+    "required_setup": [
+      "Compiled C UDP binaries (examples/udp/udp_server & udp_client)",
+      "Phase 2 LD_PRELOAD tracer and Phase 4 libpcap capture helper"
+    ],
+    "execution_steps": [
+      "Run 'Single UDP Datagram Echo' and verify there is NO connect/listen/accept and NO SYN/FIN packets.",
+      "Run 'Multiple Datagrams (Varied Payload Sizes)' and verify each message arrives intact with its exact byte length.",
+      "Run 'UDP Server Unavailable' to observe sendto() succeeding locally while recvfrom() times out."
+    ],
+    "supported_scenarios": [
+      {
+        "scenario_id": "udp-echo",
+        "label": "1. Single UDP Datagram Echo",
+        "description": "C UDP client sends one datagram to localhost UDP server and receives the exact echoed datagram.",
+        "protocol": "UDP",
+        "default_params": { "messages": ["Hello NetBox UDP!"] }
+      },
+      {
+        "scenario_id": "udp-multi-datagram",
+        "label": "2. Multiple Datagrams (Varied Payload Sizes)",
+        "description": "Sends 4 distinct datagrams of sizes 5B, 28B, 64B, and 128B to demonstrate preserved datagram boundaries.",
+        "protocol": "UDP",
+        "default_params": {}
+      },
+      {
+        "scenario_id": "udp-unavailable",
+        "label": "3. UDP Server Unavailable (No Listener)",
+        "description": "Sends a UDP datagram to an unbound localhost port; observes sendto() returning bytes sent while recvfrom() times out.",
+        "protocol": "UDP",
+        "default_params": {}
+      }
+    ],
+    "expected_observations": [
+      "Socket API trace shows socket(AF_INET, SOCK_DGRAM), bind(), sendto(), recvfrom(), close() — zero listen()/accept().",
+      "Captured packets report protocol='UDP' with IPv4 header + 8-byte UDP header + exact datagram payload length.",
+      "Multiple datagrams stay separate 1-to-1 sendto/recvfrom operations."
+    ],
+    "observation_caveats": [
+      "Because UDP has no SYN/FIN handshake, TCP flow handshake analysis does not apply to UDP runs."
+    ]
+  },
+  "questions": [
+    {
+      "question_id": "m5-q1",
+      "type": "multiple_choice",
+      "prompt": "How many bytes is a standard UDP transport header?",
+      "options": [
+        "8 bytes (src port, dst port, length, checksum)",
+        "20 bytes",
+        "32 bytes",
+        "64 bytes"
+      ],
+      "correct_option_index": 0,
+      "expected_keywords": [],
+      "rubric_summary": "UDP headers are always fixed at 8 bytes.",
+      "explanation": "A UDP header contains four 16-bit fields: source port, destination port, length, and checksum — totaling exactly 8 bytes."
+    },
+    {
+      "question_id": "m5-q2",
+      "type": "scenario",
+      "prompt": "A UDP client calls sendto() targeting an unbound port where no UDP server is running. What typically happens immediately on sendto()?",
+      "options": [
+        "sendto() blocks until a server starts listening.",
+        "sendto() returns the byte count immediately because UDP is connectionless; failure only surfaces later via timeout or ICMP Port Unreachable.",
+        "The kernel performs a 3-way handshake and returns ECONNREFUSED on sendto().",
+        "The OS automatically starts an echo server."
+      ],
+      "correct_option_index": 1,
+      "expected_keywords": [],
+      "rubric_summary": "UDP sendto() queues the datagram without verifying a peer listener.",
+      "explanation": "Because UDP performs no connection setup, sendto() hands the datagram to IP immediately; an unconnected UDP socket only sees unavailability when recvfrom() times out (or via ICMP error on connected UDP sockets)."
+    },
+    {
+      "question_id": "m5-q3",
+      "type": "short_answer",
+      "prompt": "Compare how TCP and UDP handle message boundaries when an application performs two consecutive sends of 10 bytes and 20 bytes.",
+      "options": [],
+      "correct_option_index": null,
+      "expected_keywords": ["stream", "boundary", "datagram", "coalesce", "separate"],
+      "rubric_summary": "TCP is a byte stream (reads may coalesce/split); UDP preserves each datagram boundary.",
+      "explanation": "TCP treats data as an unstructured byte stream so one recv() might read 30 bytes or 15 bytes; UDP preserves message boundaries so each recvfrom() returns one discrete datagram (10 bytes, then 20 bytes)."
+    }
+  ],
+  "completion_criteria": {
+    "require_experiment_run": true,
+    "min_assessment_score_pct": 67,
+    "description": "Execute at least one UDP experiment and score at least 67% on the assessment."
+  }
+}

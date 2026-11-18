@@ -24,7 +24,7 @@ export class DashboardPanel {
 
     const panel = vscode.window.createWebviewPanel(
       DashboardPanel.viewType,
-      "NetBox Dashboard",
+      "NetBox Welcome & Setup",
       column || vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -41,7 +41,7 @@ export class DashboardPanel {
     this._extensionUri = extensionUri;
     this._backendService = BackendService.getInstance();
 
-    this._panel.title = "NetBox Dashboard";
+    this._panel.title = "NetBox Welcome & Setup";
     this._panel.iconPath = vscode.Uri.joinPath(extensionUri, "media", "netbox-icon.svg");
 
     this._update();
@@ -62,32 +62,11 @@ export class DashboardPanel {
   }
 
   private async _fetchAndPushStatus() {
-    const status = await this._backendService.checkHealth();
+    const readiness = await this._backendService.getComponentReadiness();
     this._panel.webview.postMessage({
-      type: "backendStatus",
-      payload: status,
+      type: "readinessReport",
+      payload: readiness,
     });
-
-    if (status.connected) {
-      try {
-        const project = await this._backendService.getProjectInfo();
-        this._panel.webview.postMessage({
-          type: "projectInfo",
-          payload: project,
-        });
-
-        const examples = await this._backendService.getExamples();
-        this._panel.webview.postMessage({
-          type: "examplesList",
-          payload: examples,
-        });
-      } catch (err: any) {
-        this._panel.webview.postMessage({
-          type: "errorMessage",
-          payload: { message: `Failed to load metadata: ${err?.message}` },
-        });
-      }
-    }
   }
 
   private async _handleMessage(message: WebviewToExtensionMessage) {
@@ -96,61 +75,39 @@ export class DashboardPanel {
         await this._fetchAndPushStatus();
         break;
 
-      case "getProject":
-        try {
-          const project = await this._backendService.getProjectInfo();
-          this._panel.webview.postMessage({
-            type: "projectInfo",
-            payload: project,
-          });
-        } catch (err: any) {
-          vscode.window.showWarningMessage(
-            `Could not reach NetBox backend at ${this._backendService.getBackendUrl()}. Is the backend running?`
-          );
-        }
-        break;
-
-      case "getExamples":
-        try {
-          const examples = await this._backendService.getExamples();
-          this._panel.webview.postMessage({
-            type: "examplesList",
-            payload: examples,
-          });
-        } catch (err: any) {
-          vscode.window.showWarningMessage(
-            `Could not fetch examples from backend: ${err?.message}`
-          );
-        }
-        break;
-
       case "openVisualizer":
-        vscode.commands.executeCommand("netbox.openVisualizer");
+        vscode.commands.executeCommand("netbox.openVisualizer", message.payload?.runId);
         break;
+
+      case "startGuidedTour":
+        vscode.commands.executeCommand("netbox.startGuidedTour");
+        break;
+
+      case "startPresentationMode":
+        vscode.commands.executeCommand("netbox.startPresentationMode");
+        break;
+
+      case "configureBackend":
+        await vscode.commands.executeCommand("netbox.configureBackend");
+        await this._fetchAndPushStatus();
+        break;
+
+      case "openDocs": {
+        const target =
+          message.payload?.url || "https://github.com/hrdkkmr/netbox#readme";
+        vscode.env.openExternal(vscode.Uri.parse(target));
+        break;
+      }
 
       case "executeLiveRun":
         try {
           const runRes = await this._backendService.createRun("tcp-echo");
-          vscode.window.showInformationMessage(`Executed run ${runRes.run_id} (${runRes.event_count} events).`);
-          vscode.commands.executeCommand("netbox.openVisualizer");
+          vscode.window.showInformationMessage(
+            `Executed live TCP run ${runRes.run_id} (${runRes.event_count} socket events, ${runRes.packet_count ?? 0} packets).`
+          );
+          vscode.commands.executeCommand("netbox.openVisualizer", runRes.run_id);
         } catch (err: any) {
           vscode.window.showErrorMessage(`Execution failed: ${err?.message}`);
-        }
-        break;
-
-      case "openFile":
-        if (message.payload?.filePath) {
-          const workspaceFolders = vscode.workspace.workspaceFolders;
-          if (workspaceFolders && workspaceFolders.length > 0) {
-            const rootUri = workspaceFolders[0].uri;
-            const targetUri = vscode.Uri.joinPath(rootUri, message.payload.filePath);
-            try {
-              const doc = await vscode.workspace.openTextDocument(targetUri);
-              await vscode.window.showTextDocument(doc);
-            } catch (err) {
-              vscode.window.showErrorMessage(`Unable to open file: ${message.payload.filePath}`);
-            }
-          }
         }
         break;
     }
@@ -169,7 +126,6 @@ export class DashboardPanel {
 
   private _update() {
     this._panel.webview.html = this._getHtmlForWebview(this._panel.webview);
-    // Push initial status shortly after Webview DOM initializes
     setTimeout(() => {
       this._fetchAndPushStatus();
     }, 200);
@@ -191,7 +147,7 @@ export class DashboardPanel {
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${webview.cspSource} https:; font-src ${webview.cspSource};">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="${stylesUri}">
-  <title>NetBox Dashboard</title>
+  <title>NetBox Welcome &amp; Setup</title>
 </head>
 <body>
   <div class="dashboard-container">
@@ -200,147 +156,103 @@ export class DashboardPanel {
         <div class="logo-box">NB</div>
         <div class="title-group">
           <h1>NetBox</h1>
-          <span class="subtitle">Computer Networks Assistant</span>
+          <span class="subtitle">Hands-On Computer Networks Laboratory &amp; Evidence-Grounded Local AI Tutor</span>
         </div>
       </div>
       <div class="header-status">
         <div id="backend-status-badge" class="status-badge connecting">
           <span class="status-dot"></span>
-          <span class="status-label">Checking Backend...</span>
+          <span class="status-label">Checking Components...</span>
         </div>
-        <div class="phase-badge">Phase 1: Extension Foundation</div>
+        <div class="phase-badge">v0.8.0</div>
       </div>
     </header>
 
     <main class="dashboard-grid">
-      <!-- Section A: Project Overview -->
-      <section class="card overview-card">
+      <!-- Welcome & Philosophy -->
+      <section class="card overview-card" style="grid-column: 1 / -1;">
         <div class="card-header">
-          <h2>Project Overview</h2>
-          <span class="card-tag">Phase 1</span>
-        </div>
-        <div class="card-body">
-          <p class="description-text" id="project-description">
-            NetBox pairs a local offline networking environment with a VS Code assistant that executes networking code,
-            records actual socket and packet events, visualizes what occurred, and provides grounded course-aware explanations.
-          </p>
-          <div class="stats-row">
-            <div class="stat-item">
-              <span class="stat-label">Current Phase</span>
-              <span class="stat-value" id="current-phase-val">Phase 1</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">Supported Languages</span>
-              <span class="stat-value">C (POSIX), Python</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">Verified Baseline</span>
-              <span class="stat-value">TCP Sockets (Phase 0)</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Section B: Networking Examples -->
-      <section class="card examples-card">
-        <div class="card-header">
-          <h2>Networking Examples</h2>
-          <span class="card-count" id="examples-count">1 available</span>
-        </div>
-        <div class="card-body">
-          <div class="example-item selected">
-            <div class="example-header">
-              <span class="example-badge tcp">TCP</span>
-              <h3>POSIX TCP Echo Client &amp; Server</h3>
-            </div>
-            <p class="example-desc">
-              Standard POSIX sockets on loopback (127.0.0.1:8080). Handles sequential client connections,
-              stream echo verification, and clean socket closure.
-            </p>
-            <div class="example-files">
-              <span class="file-chip" id="open-server-file" title="Click to view file">examples/tcp/server.c</span>
-              <span class="file-chip" id="open-client-file" title="Click to view file">examples/tcp/client.c</span>
-              <span class="file-chip" id="open-readme-file" title="Click to view file">examples/tcp/README.md</span>
-            </div>
-            <div class="example-commands">
-              <code>make all &amp;&amp; ./examples/tcp/server</code>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Section C: Execution -->
-      <section class="card execution-card">
-        <div class="card-header">
-          <h2>Execution &amp; Demonstration</h2>
-          <span class="card-tag simulated">Simulated in Phase 1</span>
-        </div>
-        <div class="card-body">
-          <p class="info-note">
-            In Phase 1, execution demonstrates the planned telemetry flow using verified simulated events.
-            Live compilation and LD_PRELOAD socket instrumentation will be active in Phase 2.
-          </p>
-          <div class="execution-actions">
-            <button id="btn-run-demo" class="btn btn-primary">
-              <span class="btn-icon">&#9658;</span> Run Phase 1 Demo Flow
-            </button>
-            <div id="demo-status" class="execution-status-box idle">
-              <span class="status-indicator"></span>
-              <span id="demo-status-text">Ready to run demonstration</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Section D: Visualizer Access -->
-      <section class="card visualizer-card">
-        <div class="card-header">
-          <h2>Visualizer</h2>
-          <span class="card-tag">Webview</span>
+          <h2>Welcome to NetBox</h2>
+          <span class="card-tag">Real Experiments &middot; Real Telemetry &middot; Local AI</span>
         </div>
         <div class="card-body">
           <p class="description-text">
-            Inspect network topology, socket lifecycles, and chronological event timelines.
-            Currently visualizes the 12-event simulated TCP connection sequence from docs/event_schema.md.
+            NetBox helps students learn Computer Networks by running <strong>real networking experiments</strong>
+            (TCP, UDP, DNS, HTTP, ARP, IP/Subnetting, Routing, Monitoring), observing actual OS socket API calls
+            (<code>LD_PRELOAD</code>) and wire-level packets (<code>libpcap</code>), visualizing flows interactively,
+            and asking a <strong>host-local AI tutor (Ollama)</strong> whose answers cite verified captured evidence.
           </p>
-          <div class="visualizer-status-badge simulated">
-            <span>Data Mode: SIMULATED (docs/event_schema.md v1.0)</span>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;">
+            <button id="btn-open-visualizer" class="btn btn-primary">&#9658; Get Started (Open Workspace)</button>
+            <button id="btn-start-tour" class="btn btn-secondary">&#128214; Start 10-Step Guided Tour</button>
+            <button id="btn-configure-backend" class="btn btn-secondary">&#9881; Connect to NetBox Backend</button>
+            <button id="btn-presentation-mode" class="btn btn-secondary">&#127916; Presentation / Demo Mode</button>
+            <button id="btn-view-docs" class="btn btn-secondary">&#128196; View Documentation</button>
           </div>
-          <button id="btn-open-visualizer" class="btn btn-secondary">
-            Open Visualizer Panel &rarr;
-          </button>
         </div>
       </section>
 
-      <!-- Section E: Backend Status -->
-      <section class="card backend-card">
+      <!-- Honest 7-Component Readiness Matrix -->
+      <section class="card backend-card" style="grid-column: 1 / -1;">
         <div class="card-header">
-          <h2>Backend Service</h2>
-          <button id="btn-recheck-backend" class="btn-sm" title="Recheck backend">Refresh</button>
+          <h2>Component Readiness (Honest Live Diagnostics)</h2>
+          <button id="btn-recheck-backend" class="btn-sm" title="Re-verify backend and components">&#8635; Refresh Status</button>
         </div>
         <div class="card-body">
-          <div class="backend-details">
-            <div class="detail-row">
-              <span class="label">Backend URL:</span>
-              <code id="backend-url-val">http://127.0.0.1:8000</code>
-            </div>
-            <div class="detail-row">
-              <span class="label">Connection:</span>
-              <span id="backend-conn-status" class="val-text">Checking...</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Service Name:</span>
-              <span id="backend-service-val" class="val-text">&mdash;</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">API Version:</span>
-              <span id="backend-version-val" class="val-text">&mdash;</span>
-            </div>
+          <div id="readiness-summary-banner" class="backend-helper hidden"></div>
+          <div class="backend-details" id="readiness-matrix">
+            <div class="detail-row"><span class="label">1. VS Code Extension</span><span id="comp-ext" class="val-text">Installed (v0.8.0)</span></div>
+            <div class="detail-row"><span class="label">2. Backend URL Configured</span><code id="comp-url">http://127.0.0.1:8000</code></div>
+            <div class="detail-row"><span class="label">3. Backend Reachable</span><span id="comp-reach" class="val-text">Checking...</span></div>
+            <div class="detail-row"><span class="label">4. Authentication (SecretStorage)</span><span id="comp-auth" class="val-text">Checking...</span></div>
+            <div class="detail-row"><span class="label">5. Socket Instrumentation (LD_PRELOAD)</span><span id="comp-sock" class="val-text">Checking...</span></div>
+            <div class="detail-row"><span class="label">6. Packet Capture (libpcap)</span><span id="comp-pcap" class="val-text">Checking...</span></div>
+            <div class="detail-row"><span class="label">7. Host Local AI (Ollama + Model)</span><span id="comp-ai" class="val-text">Checking...</span></div>
           </div>
-          <div id="backend-instructions" class="backend-helper hidden">
-            <p><strong>Backend not detected?</strong> Start it via:</p>
-            <code>./scripts/run_backend.sh</code>
+        </div>
+      </section>
+
+      <!-- Local & LAN Backend Setup Guide -->
+      <section class="card">
+        <div class="card-header">
+          <h2>Option A: Run Local Backend</h2>
+          <span class="card-tag">Linux / WSL 2</span>
+        </div>
+        <div class="card-body">
+          <p class="description-text">
+            The VS Code extension connects to the NetBox FastAPI backend, which executes networking labs,
+            captures packets, and calls local Ollama.
+          </p>
+          <div class="example-commands" style="margin-top:8px;">
+            <code>git clone https://github.com/hrdkkmr/netbox.git &amp;&amp; cd netbox</code><br/>
+            <code>make all &amp;&amp; ./scripts/setup_backend.sh</code><br/>
+            <code>./scripts/start_netbox.sh</code>
           </div>
+          <p class="info-note" style="margin-top:8px;">
+            For local AI tutoring, install Ollama on the host and pull a small local model (e.g., <code>ollama pull qwen2.5-coder:1.5b</code>).
+            Ollama stays strictly on <code>127.0.0.1:11434</code>.
+          </p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>Option B: Connect to a LAN Host</h2>
+          <span class="card-tag">Classroom / Hotspot</span>
+        </div>
+        <div class="card-body">
+          <p class="description-text">
+            Connecting to an instructor or teammate running NetBox on the same Wi-Fi/hotspot?
+            You do <strong>not</strong> need Ollama or the backend installed locally.
+          </p>
+          <ol style="margin:8px 0 8px 18px;font-size:12.5px;line-height:1.6;">
+            <li>Click <strong>Connect to NetBox Backend</strong> above.</li>
+            <li>Enter the host URL (e.g. <code>http://192.168.137.1:8000</code>).</li>
+            <li>Enter the host's pairing token (stored securely in VS Code SecretStorage).</li>
+          </ol>
+          <p class="info-note">
+            All AI inference stays on the host computer—no cloud API or Internet connection is required.
+          </p>
         </div>
       </section>
     </main>

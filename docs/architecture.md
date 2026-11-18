@@ -1,6 +1,6 @@
 # NetBox Architecture
 
-> **Current Status:** Foundation established in **Phase 0**; VS Code Extension structure, Webview Dashboard, Visualizer foundation, and local FastAPI Backend established in **Phase 1**; C Program Execution and Real Socket Event Collection (`LD_PRELOAD` instrumentation library `libnetbox_trace.so`, run manager, and process runner) implemented and verified in **Phase 2**. Packet capture (Phase 4) and local LLM integration (Phase 5) are planned.
+> **Current Status:** Phases 0–5 completed and live-verified: C TCP reference example (Phase 0), VS Code Extension (`dist/extension.js`) & FastAPI backend (Phase 1), `LD_PRELOAD` socket tracing (Phase 2), modular interactive visualizer (Phase 3), native `libpcap` loopback packet capture & TCP flow/correlation analysis (Phase 4), and the **Grounded Local AI Assistant** (`backend/app/ai/`, local Ollama `qwen2.5-coder:1.5b`, deterministic retrieval, verified clickable evidence citations, and Learning Mode — Phase 5). NetBox Core LAN integration (Phase 6) is planned next.
 
 ---
 
@@ -64,12 +64,17 @@ NetBox is organized into two coupled parts — **NetBox Core** (shared classroom
 |  | - GET /api/runs/{id}/events -> Real recorded socket events (ACTUAL)     |  |
 |  | - POST /api/runs/{id}/stop  -> Gracefully terminate active run          |  |
 |  | - GET /api/runs           -> List recent execution runs                 |  |
+|  | - GET /api/runs/{id}/packets       -> Real captured TCP/IP packets      |  |
+|  | - GET /api/runs/{id}/packets/{pid} -> Single packet detail              |  |
+|  | - GET /api/runs/{id}/flows         -> Bidirectional TCP flows & HS      |  |
+|  | - GET /api/runs/{id}/correlations  -> Socket API <-> Packet links       |  |
 |  +-------------------------------------------------------------------------+  |
 |  | Core Backend Services:                                                  |  |
 |  | - ProcessRunner: Subprocess launcher, allowlist, LD_PRELOAD injection   |  |
-|  | - RunManager: Run lifecycle state machine & directory storage           |  |
-|  | - EventReader: JSONL parser, multi-process timestamp sorting & merging  |  |
-|  | - Packet Correlator (Phase 4): Correlates libpcap frames with sockets   |  |
+|  | - PacketCaptureService: Native libpcap helper (cap_net_raw/admin=eip)   |  |
+|  | - RunManager: Dual-layer lifecycle & /tmp/netbox_runs/<run_id> storage  |  |
+|  | - EventReader & PacketParser: Separate schema v1.0 JSONL validators     |  |
+|  | - TcpAnalyzer & EventCorrelator: Handshake/flow/4-tuple monotonic match |  |
 |  +-------------------------------------------------------------------------+  |
 +-------------------------------------------------------------------------------+
                                                        |
@@ -94,11 +99,14 @@ NetBox is organized into two coupled parts — **NetBox Core** (shared classroom
 - **Backend Service:** Manages HTTP communication with the local backend via `netbox.backendUrl`, providing health checks, live run creation (`createRun`), status querying, and event retrieval.
 - **Activity Bar Sidebar:** Integrates directly into VS Code's sidebar for quick one-click access to the dashboard and visualizer.
 - **Dashboard Webview:** Modern dark-themed status portal showing project overview, available networking examples (with links to open source files), Phase 1 demo flow, and Phase 2 live execution triggers.
-- **Visualizer Webview:** Interactive networking inspector displaying:
-  - **Network Topology:** Real-time client and server node representation, local/remote ports, socket file descriptors, and packet flight animation.
-  - **Chronological Timeline:** Ordered list of execution events conforming to `docs/event_schema.md` v1.0, with clear distinction between `SIMULATED DATA` and `ACTUAL SOCKET API EVENTS`.
-  - **Structured JSON Inspector:** Formatted inspection of event fields, return values, errors, and process metadata.
-  - **Playback Controls:** Step-by-step or automated progression (Play/Pause, Step Next/Prev, Restart, Speed Control).
+- **Visualizer Webview (Phase 3 Modular Architecture — `extension/media/visualizer/`):**
+  - **Event Store (`eventStore.js`):** Immutable event storage and strict Actual (`source="socket_api"` & `is_simulated=false`) vs. Simulated telemetry classification.
+  - **Socket State & Topology Engine (`socketStateEngine.js`):** Replays observed events to derive separate API-level lifecycle states for client sockets, server listening sockets, and accepted server connection sockets (without inferring kernel states like `TIME_WAIT`).
+  - **Timing & Performance Engine (`timingEngine.js`):** Computes monotonic relative elapsed times (`+0.000 ms`), consecutive deltas, selected A↔B API-event intervals, and actual successful TX/RX byte totals.
+  - **API-Level Sequence Mapper (`sequenceMapper.js`):** Dynamically maps Client ↔ Server socket API calls without inventing TCP 3-way handshake packets; flags unmappable events as `unresolved`.
+  - **Non-Destructive Filter Engine (`eventFilter.js`):** Filters timeline by process, event type, socket FD, errors-only, and search query without mutating raw events.
+  - **Timestamp-Aware Playback Engine (`playbackEngine.js`):** Replays events using actual `timestamp_ns` intervals scaled by speed (`0.5x`, `1x`, `2x`, `4x`) with readability clamping and leak-safe timer teardown.
+  - **Deterministic Event Inspector (`eventInspector.js`):** Displays all 20 observed schema fields (`"Not available"` for nulls), separates Observed vs. Derived fields, and provides rule-based explanations (no LLM).
 
 ### B. User-Space Instrumentation Engine (`instrumentation/`)
 - Shared library `libnetbox_trace.so` built with C11/POSIX mechanisms.
@@ -179,3 +187,11 @@ Phase 4 (Live Packet Capture - Planned):
 | **Backend Downtime** | Extension checks health on startup and recheck; Webviews display clean offline badges and startup instructions instead of crashing. |
 | **Webview Memory Leaks** | Webview panels use `retainContextWhenHidden: true` with clean disposal on close. |
 | **Node.js Isolation** | Extension is cleanly isolated in `extension/`, built with lightweight `esbuild`, and avoids Windows-npm pollution by recommending Linux `nvm`. |
+
+
+---
+
+## Phase 6 & Phase 7 Extensions (LAN Host–Client Core & Curriculum Platform)
+
+- **Phase 6 (NetBox Core & LAN Integration):** FastAPI serves the unified Browser Web UI at `GET /` and `/media/*`, adds component-independent health & LAN discovery APIs (`/api/system/{health,info,network,services,connection}`), lightweight host-controlled pairing token authentication (`X-NetBox-Token` / `Bearer`), offline SVG QR generation, real client session heartbeats, and service management scripts (`scripts/start_netbox.sh`, `stop_netbox.sh`, `check_netbox.sh`, `scripts/windows/setup_lan_forward.ps1`). Ollama remains strictly bound to `127.0.0.1:11434` on the host. See [`docs/PHASE6_ARCHITECTURE.md`](./PHASE6_ARCHITECTURE.md) and [`docs/PHASE6.md`](./PHASE6.md).
+- **Phase 7 (Curriculum Labs & Final Hardening):** Adds 9 structured JSON Computer Networks lab modules (`curriculum/labs/`), compiled C POSIX UDP echo server/client (`examples/udp/`), allowlisted localhost experiment runners (`backend/app/services/lab_runner.py`), deterministic IPv4 Subnet Calculator (`backend/app/curriculum/subnet_calc.py`), 5-mode grounded Curriculum AI Tutor (`POST /api/ai/curriculum/interact`), deterministic assessment grading, and locally persisted JSON progress (`backend/data/curriculum_progress.json`). See [`docs/PHASE7_ARCHITECTURE.md`](./PHASE7_ARCHITECTURE.md), [`docs/PHASE7.md`](./PHASE7.md), and [`docs/FINAL_ARCHITECTURE.md`](./FINAL_ARCHITECTURE.md).

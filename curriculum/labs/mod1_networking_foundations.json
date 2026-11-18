@@ -1,0 +1,116 @@
+{
+  "lab_id": "mod1-foundations",
+  "module_number": 1,
+  "module_title": "Module 1 — Networking Foundations",
+  "title": "Sockets, Ports & Encapsulation in a Live Client-Server Connection",
+  "topic": "OSI/TCP-IP Models, Encapsulation, Interfaces, Client-Server Sockets",
+  "difficulty": "beginner",
+  "estimated_minutes": 15,
+  "learning_objectives": [
+    "Map POSIX socket API calls (socket, bind, listen, accept, connect, send, recv, close) to TCP/IP and OSI layers.",
+    "Distinguish a server's listening socket file descriptor from an accepted client-connection socket file descriptor.",
+    "Trace how application payload bytes are encapsulated into TCP segments and IPv4 packets."
+  ],
+  "prerequisites": ["Basic C or Python programming familiarity"],
+  "concept_explanation": [
+    {
+      "title": "OSI vs. TCP/IP Layering & Encapsulation",
+      "summary": "Networking stacks divide responsibilities into layers. Each layer wraps data from the layer above with its own header (encapsulation) on transmit and strips it (decapsulation) on receive.",
+      "key_points": [
+        "Application data written via send() becomes TCP payload (Layer 4 Transport).",
+        "TCP adds source/destination ports, sequence/ack numbers, and flags; IPv4 (Layer 3 Network) adds source/destination IP addresses and TTL.",
+        "Link Layer (Layer 2) frames the packet for the local medium (Ethernet or loopback)."
+      ],
+      "protocol_layers": ["Application (L7)", "Transport (L4)", "Network (L3)", "Data Link (L2)"]
+    },
+    {
+      "title": "Client-Server Socket Lifecycle & Ports",
+      "summary": "A server binds to a well-known local port (e.g., 127.0.0.1:8080) and listens, while the OS assigns the client an ephemeral source port during connect().",
+      "key_points": [
+        "accept() returns a NEW file descriptor representing the specific client session; the original FD keeps listening.",
+        "Every TCP connection is uniquely identified by its 4-tuple: (client_ip, client_port, server_ip, server_port)."
+      ],
+      "protocol_layers": ["OS Socket API", "Transport (TCP)"]
+    }
+  ],
+  "experiment": {
+    "experiment_id": "tcp-echo",
+    "title": "Observe a Live C POSIX TCP Echo Connection",
+    "instructions": "Run the allowlisted POSIX C TCP echo server and client on loopback (127.0.0.1:8080). NetBox intercepts every POSIX socket call via LD_PRELOAD and simultaneously captures real IPv4/TCP packets via libpcap.",
+    "required_setup": [
+      "Compiled C reference binaries (examples/tcp/server & client)",
+      "LD_PRELOAD tracer (instrumentation/libnetbox_trace.so)",
+      "Optional: netbox_pcap with cap_net_raw for wire-level packet capture"
+    ],
+    "execution_steps": [
+      "Select the 'Complete TCP Echo (Foundations)' scenario and click Run Experiment.",
+      "Open the 'Overview & Socket API' tab and step through socket -> bind -> listen -> connect -> accept -> send -> recv -> close.",
+      "Switch to the 'Packets' and 'Correlations' tabs to map application send()/recv() calls to IPv4/TCP wire segments."
+    ],
+    "supported_scenarios": [
+      {
+        "scenario_id": "tcp-echo",
+        "label": "Complete TCP Echo (Foundations)",
+        "description": "Runs the C TCP echo server and client on 127.0.0.1:8080 with full socket + packet capture.",
+        "protocol": "TCP",
+        "default_params": { "message": "Hello NetBox Module 1!" }
+      }
+    ],
+    "expected_observations": [
+      "Server performs socket() -> bind(127.0.0.1:8080) -> listen() before client calls connect().",
+      "accept() returns a new socket FD distinct from the listening FD.",
+      "Client uses an OS-assigned ephemeral source port while server listens on port 8080.",
+      "Real captured IPv4+TCP packets show encapsulation: link header + 20B IPv4 header + TCP header + payload."
+    ],
+    "observation_caveats": [
+      "User-space socket_api events and wire-level packet_capture events are distinct layers — kernel ACKs appear as packets without separate application send() calls."
+    ]
+  },
+  "questions": [
+    {
+      "question_id": "m1-q1",
+      "type": "multiple_choice",
+      "prompt": "In the server process trace, why does accept() return a different file descriptor number than the one returned by socket()?",
+      "options": [
+        "Because the kernel closes the listening socket as soon as one client connects.",
+        "Because the listening socket stays open to accept future connections while the new FD represents this specific client's 4-tuple session.",
+        "Because POSIX requires every TCP packet to allocate a fresh file descriptor.",
+        "Because accept() runs inside the client process rather than the server process."
+      ],
+      "correct_option_index": 1,
+      "expected_keywords": [],
+      "rubric_summary": "Listening FD stays open for new connections; accepted FD tracks the established 4-tuple session.",
+      "explanation": "accept() allocates a new connected socket FD for the established client session so the original listening FD can continue queuing incoming connections."
+    },
+    {
+      "question_id": "m1-q2",
+      "type": "packet_interpretation",
+      "prompt": "If the client sends a 22-byte message over IPv4 TCP (20-byte IP header, 32-byte TCP header with timestamps), what IPv4 total_length do you expect in the captured packet?",
+      "options": [
+        "22 bytes",
+        "42 bytes",
+        "74 bytes",
+        "1500 bytes"
+      ],
+      "correct_option_index": 2,
+      "expected_keywords": [],
+      "rubric_summary": "IPv4 total_length = IP header (20) + TCP header (32) + payload (22) = 74 bytes.",
+      "explanation": "Encapsulation adds the Layer 3 header (20 B) and Layer 4 TCP header (32 B) to the 22 B payload, yielding an IPv4 total_length of 74 bytes."
+    },
+    {
+      "question_id": "m1-q3",
+      "type": "short_answer",
+      "prompt": "Briefly explain why a captured trace can show more TCP packets than application send() calls.",
+      "options": [],
+      "correct_option_index": null,
+      "expected_keywords": ["handshake", "ack", "kernel", "syn", "fin"],
+      "rubric_summary": "Mention kernel-generated control segments (SYN, SYN+ACK, ACK, FIN) that occur without explicit send() calls.",
+      "explanation": "The OS TCP stack generates control segments (SYN, SYN+ACK, pure ACKs, FINs) automatically in response to connect(), accept(), recv(), and close() without separate application send() calls."
+    }
+  ],
+  "completion_criteria": {
+    "require_experiment_run": true,
+    "min_assessment_score_pct": 67,
+    "description": "Execute the Foundations TCP echo experiment and score at least 67% on the assessment."
+  }
+}

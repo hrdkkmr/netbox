@@ -3,17 +3,42 @@ import { registerDashboardCommand } from "./commands/dashboard";
 import { registerVisualizerCommand } from "./commands/visualizer";
 import { registerCheckBackendCommand } from "./commands/checkBackend";
 import { registerProjectInfoCommand } from "./commands/projectInfo";
+import { registerConfigureBackendCommand } from "./commands/configureBackend";
 import { NetBoxSidebarProvider } from "./providers/sidebarProvider";
+import { DashboardPanel } from "./providers/dashboardPanel";
+import { VisualizerPanel } from "./providers/visualizerPanel";
 import { BackendService } from "./services/backendService";
 
-export function activate(context: vscode.ExtensionContext) {
-  console.log("[NetBox] Activating NetBox — Computer Networks Assistant...");
+export async function activate(context: vscode.ExtensionContext) {
+  console.log("[NetBox] Activating NetBox v0.8.0...");
 
-  // Register commands
+  // Initialize secure SecretStorage token management (never logs secrets)
+  await BackendService.getInstance().initialize(context.secrets);
+
+  // Register core & Phase 8 onboarding/configuration commands
   context.subscriptions.push(registerDashboardCommand(context));
   context.subscriptions.push(registerVisualizerCommand(context));
   context.subscriptions.push(registerCheckBackendCommand());
   context.subscriptions.push(registerProjectInfoCommand());
+  context.subscriptions.push(registerConfigureBackendCommand());
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("netbox.startGuidedTour", () => {
+      VisualizerPanel.createOrShow(context.extensionUri, undefined, {
+        startTour: true,
+        globalState: context.globalState,
+      });
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("netbox.startPresentationMode", () => {
+      VisualizerPanel.createOrShow(context.extensionUri, undefined, {
+        presentationMode: true,
+        globalState: context.globalState,
+      });
+    })
+  );
 
   // Register sidebar tree view
   const sidebarProvider = new NetBoxSidebarProvider();
@@ -27,29 +52,18 @@ export function activate(context: vscode.ExtensionContext) {
     100
   );
   statusBarItem.command = "netbox.openDashboard";
-  statusBarItem.text = "$(network) NetBox";
-  statusBarItem.tooltip = "NetBox: Computer Networks Assistant (Click to open Dashboard)";
+  statusBarItem.text = "$(radio-tower) NetBox";
+  statusBarItem.tooltip = "NetBox: Computer Networks Learning Environment (Click to open Welcome & Setup)";
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 
-  // Show welcome notification on initial activation
-  vscode.window.showInformationMessage(
-    "NetBox Computer Networks Assistant is ready. Run 'NetBox: Open Dashboard' to get started."
-  );
-
-  // Proactively check backend status in the background
-  BackendService.getInstance()
-    .checkHealth()
-    .then((status) => {
-      if (status.connected) {
-        console.log(`[NetBox] Connected to backend at ${status.url} (v${status.version})`);
-      } else {
-        console.log(`[NetBox] Backend offline at ${status.url}`);
-      }
-    })
-    .catch((err) => {
-      console.warn(`[NetBox] Backend check error: ${err}`);
-    });
+  // First-launch onboarding experience ONLY (never forces completed/returning users repeatedly)
+  const welcomeShown = context.globalState.get<boolean>("netbox.welcomeShown", false);
+  const onboardingCompleted = context.globalState.get<boolean>("netbox.onboardingCompleted", false);
+  if (!welcomeShown && !onboardingCompleted) {
+    await context.globalState.update("netbox.welcomeShown", true);
+    DashboardPanel.createOrShow(context.extensionUri);
+  }
 }
 
 export function deactivate() {

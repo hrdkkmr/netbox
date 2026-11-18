@@ -1,0 +1,114 @@
+{
+  "lab_id": "mod3-ip-subnetting",
+  "module_number": 3,
+  "module_title": "Module 3 — IP Addressing and Subnetting",
+  "title": "IPv4 CIDR, Subnet Masks, Private/Public Scopes, Gateways & NAT",
+  "topic": "IPv4, CIDR, Subnet Masks, Private/Public Addressing, Gateways, DHCP, NAT",
+  "difficulty": "beginner",
+  "estimated_minutes": 20,
+  "learning_objectives": [
+    "Calculate network address, broadcast address, subnet mask, and usable host range from any IPv4/CIDR prefix.",
+    "Determine mathematically whether two IPv4 addresses share a subnet or require routing via a default gateway.",
+    "Distinguish RFC 1918 private addresses, loopback, link-local, and NAT behavior on real host interfaces."
+  ],
+  "prerequisites": ["mod2-ethernet-arp"],
+  "concept_explanation": [
+    {
+      "title": "CIDR & Network vs. Host Portions",
+      "summary": "An IPv4 address is 32 bits split by a prefix length (/N) into N network bits and (32 - N) host bits. Bitwise AND of IP and mask yields the network address.",
+      "key_points": [
+        "Standard subnets reserve two addresses: all-zeros host bits (network ID) and all-ones host bits (broadcast).",
+        "Usable host count for /N (where N <= 30) is 2^(32 - N) - 2."
+      ],
+      "protocol_layers": ["Network (IPv4 / L3)"]
+    },
+    {
+      "title": "Private Addresses, DHCP & NAT",
+      "summary": "RFC 1918 defines private IPv4 ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) assigned locally by DHCP and translated to public IPs at edge routers via NAT.",
+      "key_points": [
+        "WSL 2 uses a private 172.16.0.0/12 NAT subnet behind Windows Hyper-V vEthernet (WSL).",
+        "To decide local delivery vs. default gateway forwarding, a host compares (dest_ip & mask) == (local_ip & mask)."
+      ],
+      "protocol_layers": ["Network (IPv4)", "DHCP", "NAT"]
+    }
+  ],
+  "experiment": {
+    "experiment_id": "net-inspect-l3",
+    "title": "Inspect Host IPv4 Configuration & Practice Deterministic Subnetting",
+    "instructions": "Run the read-only IP configuration inspection to see this host's real IPv4 addresses, prefix lengths, and default gateway. Then use the embedded deterministic IPv4 Subnet Calculator below to verify subnet boundaries and local vs. remote routing decisions.",
+    "required_setup": [
+      "Deterministic IPv4 Subnet Calculator (built-in bitwise math engine)",
+      "Linux `ip` command for real host interface/gateway inspection"
+    ],
+    "execution_steps": [
+      "Click Run Experiment to inspect the host's live IPv4 interfaces, CIDR masks, and default gateway.",
+      "Enter your host's CIDR (or try 192.168.10.42/26) in the Subnet Calculator below and compare against both a same-subnet IP and an off-subnet IP.",
+      "Verify the binary mask, network ID, broadcast address, and usable host range."
+    ],
+    "supported_scenarios": [
+      {
+        "scenario_id": "net-inspect-l3",
+        "label": "Inspect Live Host IPv4 & Gateway Config",
+        "description": "Reads real IPv4 addresses, CIDR prefixes, and default gateway without modifying host networking.",
+        "protocol": "IPv4",
+        "default_params": {}
+      }
+    ],
+    "expected_observations": [
+      "Real host interfaces show IPv4 address + CIDR prefix (e.g., 172.28.x.x/20 on WSL 2 eth0).",
+      "Default gateway lies within the same subnet as the host interface.",
+      "Subnet calculator deterministically computes exact network/broadcast/usable host ranges and same-subnet status."
+    ],
+    "observation_caveats": [
+      "All subnet calculations are computed deterministically via bitwise IPv4 arithmetic, never by an LLM."
+    ],
+    "has_subnet_calculator": true
+  },
+  "questions": [
+    {
+      "question_id": "m3-q1",
+      "type": "multiple_choice",
+      "prompt": "For the IPv4 CIDR 192.168.10.70/26, what are the network address and broadcast address?",
+      "options": [
+        "Network: 192.168.10.0, Broadcast: 192.168.10.255",
+        "Network: 192.168.10.64, Broadcast: 192.168.10.127",
+        "Network: 192.168.10.64, Broadcast: 192.168.10.126",
+        "Network: 192.168.10.32, Broadcast: 192.168.10.95"
+      ],
+      "correct_option_index": 1,
+      "expected_keywords": [],
+      "rubric_summary": "/26 has block size 64 (0, 64, 128, 192), so .70 falls in 64..127.",
+      "explanation": "A /26 subnet mask (255.255.255.192) divides the last octet into blocks of 64. Address .70 falls in the block 192.168.10.64–192.168.10.127 (62 usable hosts)."
+    },
+    {
+      "question_id": "m3-q2",
+      "type": "scenario",
+      "prompt": "Host A is 10.0.4.25/22 (mask 255.255.252.0). Will Host A send traffic to 10.0.7.10 directly on the local subnet or via its default gateway?",
+      "options": [
+        "Directly on the local subnet, because 10.0.4.0/22 spans 10.0.4.0 through 10.0.7.255.",
+        "Via the default gateway, because the third octet differs (4 vs 7).",
+        "Via NAT, because 10.0.0.0/8 is private.",
+        "It drops the packet because /22 masks are invalid on private networks."
+      ],
+      "correct_option_index": 0,
+      "expected_keywords": [],
+      "rubric_summary": "10.0.4.0/22 covers 10.0.4.0–10.0.7.255, so both hosts are on the same subnet.",
+      "explanation": "A /22 mask leaves 10 host bits (4 contiguous /24 blocks: .4, .5, .6, .7). Both 10.0.4.25 and 10.0.7.10 share network address 10.0.4.0."
+    },
+    {
+      "question_id": "m3-q3",
+      "type": "short_answer",
+      "prompt": "Explain why WSL 2's private 172.x.x.x eth0 address cannot be reached directly by another laptop on your Wi-Fi without port forwarding or mirrored networking.",
+      "options": [],
+      "correct_option_index": null,
+      "expected_keywords": ["nat", "private", "subnet", "forward", "route"],
+      "rubric_summary": "WSL 2 eth0 sits on a host-internal Hyper-V NAT subnet unknown to external LAN devices.",
+      "explanation": "In WSL 2 NAT mode, eth0 resides on an internal virtual Hyper-V subnet behind Windows NAT; external Wi-Fi/hotspot clients have no route to that internal subnet unless Windows forwards traffic (portproxy) or mirrors interfaces."
+    }
+  ],
+  "completion_criteria": {
+    "require_experiment_run": true,
+    "min_assessment_score_pct": 67,
+    "description": "Inspect live IPv4 config, test the subnet calculator, and score at least 67%."
+  }
+}
