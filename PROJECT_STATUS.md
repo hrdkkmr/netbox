@@ -1,7 +1,7 @@
 # NetBox — Project Status & Handoff Guide
 
 > **Last Updated:** 2026-11-18  
-> **Current State:** **Phases 0–8 Packaged & Verified (`v0.8.0`)** — Ready for Marketplace Publisher Configuration & Final Public Release Approval (Phase 8.8 / 8.9).  
+> **Current State:** **Phases 0–8 Completed & Published Live on VS Code Marketplace (`hrdkkmr.netbox-vscode@0.8.0`)**  
 > **Purpose of this File:** Single-source-of-truth status and handoff document so development or demonstration can resume seamlessly.
 
 ---
@@ -18,7 +18,7 @@
 | **Phase 5** | Grounded Local AI Assistant | **Completed & Live-Verified** | Three-layer grounded local AI architecture (`backend/app/ai/`), local Ollama provider live-verified with `qwen2.5-coder:1.5b` on `127.0.0.1:11434`, deterministic retrieval & flow isolation, compact `<OBSERVED_EVIDENCE_DATA_ONLY>` framing, citation & confidence validation, Learning Mode, and visualizer AI Assistant tab with verified clickable evidence links. |
 | **Phase 6** | NetBox Core & LAN Integration | **Completed & Software-Verified** | Configurable localhost/LAN backend, Windows + WSL 2 NAT discovery & opt-in forwarding script, pairing token access control, independent component health APIs, offline SVG QR code, FastAPI-served standalone Browser UI (`GET /`), startup/stop/check management scripts, and System & LAN Dashboard tab. *(Physical second-device test pending physical device.)* |
 | **Phase 7** | Curriculum Labs & Final Hardening | **Completed & Live-Verified** | 9 structured JSON CN curriculum modules (`curriculum/labs/`), compiled C POSIX UDP echo server/client (`examples/udp/`), safe allowlisted lab runner (TCP/UDP/DNS/HTTP/L2/L3/Monitoring), deterministic IPv4 Subnet Calculator, 5-mode grounded Curriculum AI Tutor, deterministic assessment grader + persisted JSON progress, polished 7-tab UI, and final docs. |
-| **Phase 8** | Production Release & VS Code Marketplace Packaging | **Packaged & Verified (Awaiting Publisher & Approval)** | Release audit, `v0.8.0` Marketplace metadata & 256×256 PNG icon, VS Code `SecretStorage` token security + URL validation, 7-component Welcome & Setup Hub, 10-step Interactive Guided Tour + Step 9 live TCP experiment, Presentation / Demo Mode, `.vscodeignore`, `LICENSE`, `CHANGELOG.md`, `extension/README.md`, clean `.vsix` build (`netbox-vscode-0.8.0.vsix`) & real VS Code CLI install verification. **79/79 automated tests passing.** |
+| **Phase 8** | Production Release & VS Code Marketplace Packaging | **Published & Live-Verified (`v0.8.0`)** | Published live on VS Code Marketplace as [`hrdkkmr.netbox-vscode`](https://marketplace.visualstudio.com/items?itemName=hrdkkmr.netbox-vscode) (`validated, public`). Release audit, `v0.8.0` metadata & 256×256 PNG icon, VS Code `SecretStorage` token security + URL validation, 7-component Welcome & Setup Hub, 10-step Interactive Guided Tour + Step 9 live TCP experiment, Presentation / Demo Mode, clean `100.44 KB` `.vsix`, and **79/79 automated tests passing**. |
 
 ---
 

@@ -3,7 +3,7 @@
   "displayName": "NetBox",
   "description": "An AI-assisted Computer Networks learning environment that lets students run real networking experiments, inspect socket operations and packets, visualize network activity, and understand concepts through an evidence-grounded AI tutor.",
   "version": "0.8.0",
-  "publisher": "netbox",
+  "publisher": "hrdkkmr",
   "license": "MIT",
   "icon": "media/netbox-icon.png",
   "repository": {

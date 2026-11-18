@@ -1,8 +1,10 @@
 # NetBox — Phase 8 Report: Production Release, Onboarding & VS Code Marketplace Packaging
 
 > **Version:** `0.8.0`  
-> **Package Artifact:** `extension/netbox-vscode-0.8.0.vsix` (26 files, `~100.4 KB`)  
-> **Publication State:** Packaged, Clean-Install Verified, Live Onboarding Verified — **Awaiting Publisher Account & Final User Approval for Public Marketplace & GitHub Release (Phase 8.8 / 8.9 Gate)**  
+> **Extension Identifier:** `hrdkkmr.netbox-vscode` (Publisher: `hrdkkmr`)  
+> **Marketplace Listing (LIVE & VERIFIED):** https://marketplace.visualstudio.com/items?itemName=hrdkkmr.netbox-vscode (`validated, public`)  
+> **Package Artifact:** `extension/netbox-vscode-0.8.0.vsix` (26 files, `100.44 KB`)  
+> **Publication State:** **PUBLISHED & LIVE-VERIFIED on Microsoft Visual Studio Marketplace**  
 
 ---
 

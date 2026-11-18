@@ -2,8 +2,9 @@
 
 **NetBox** is a Computer Networks learning and debugging project designed to pair a local/offline classroom networking environment with a VS Code extension that runs student networking programs, captures real execution events, visualizes what actually happens, and uses a local LLM to explain observed behavior using course context.
 
-> **Current Status:** **Phases 0–8 Packaged & Verified (`v0.8.0`)**  
-> NetBox is a complete, offline-capable Computer Networks laboratory, real network-observation platform (`LD_PRELOAD` + `libpcap`), host–client LAN learning server (Browser + packaged VS Code Extension `.vsix`), 9-module interactive curriculum with deterministic assessments & subnet calculator, 10-step Interactive Guided Tour & Presentation Mode, and evidence-grounded local AI tutor powered by host-local Ollama (`qwen2.5-coder:1.5b`). See [`docs/FINAL_ARCHITECTURE.md`](docs/FINAL_ARCHITECTURE.md), [`docs/PHASE8.md`](docs/PHASE8.md), [`docs/TEST_REPORT.md`](docs/TEST_REPORT.md), [`CHANGELOG.md`](CHANGELOG.md), and [`docs/DEMO_GUIDE.md`](docs/DEMO_GUIDE.md).
+> **Current Status:** **Phases 0–8 Completed & Published on VS Code Marketplace (`v0.8.0`)**  
+> **VS Code Marketplace:** [`hrdkkmr.netbox-vscode`](https://marketplace.visualstudio.com/items?itemName=hrdkkmr.netbox-vscode) (Install directly from VS Code Extensions tab: search **NetBox** or run `code --install-extension hrdkkmr.netbox-vscode`)  
+> NetBox is a complete, offline-capable Computer Networks laboratory, real network-observation platform (`LD_PRELOAD` + `libpcap`), host–client LAN learning server (Browser + VS Code Extension), 9-module interactive curriculum with deterministic assessments & subnet calculator, 10-step Interactive Guided Tour & Presentation Mode, and evidence-grounded local AI tutor powered by host-local Ollama (`qwen2.5-coder:1.5b`). See [`docs/FINAL_ARCHITECTURE.md`](docs/FINAL_ARCHITECTURE.md), [`docs/PHASE8.md`](docs/PHASE8.md), [`docs/TEST_REPORT.md`](docs/TEST_REPORT.md), [`CHANGELOG.md`](CHANGELOG.md), and [`docs/DEMO_GUIDE.md`](docs/DEMO_GUIDE.md).
 
 ---
 
